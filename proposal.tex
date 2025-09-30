@@ -1,0 +1,156 @@
+\documentclass[submission]{eptcs}
+\setlength{\parindent}{0pt}
+\providecommand{\event}{} % Name of the event you are submitting to
+\usepackage{listings}
+
+\lstdefinelanguage{Lambda}{%
+  morekeywords={%
+    if,then,else,fix % keywords go here
+  },%
+  morekeywords={[2]int},   % types go here
+  otherkeywords={:}, % operators go here
+  literate={% replace strings with symbols
+    {->}{{$\to$}}{2}
+    {lambda}{{$\lambda$}}{1}
+  },
+  basicstyle={\sffamily},
+  keywordstyle={\bfseries},
+  keywordstyle={[2]\itshape}, % style for types
+  keepspaces,
+  mathescape % optional
+}[keywords,comments,strings]%
+\setlength{\parindent}{2em}   % choose your indent width
+
+\title{Titulo propuesta}
+\author{ autor
+\institute{Department of Computer Science\\
+University of Chile\\
+Santiago, Chile}
+}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+Every programming language has its own way of dealing with types of expressions. Some of them require the programmer to specify types, this is, whether it is a number, a string, or something else. Others infer types just by looking at the expressions, and others simply don't know what is the type of the expression. The way a language determines the type of its expressions is called a type system, and there are two main approaches; static and dynamic type systems.
+
+A static type system checks and determines the type of each expression before running the program, and lets the user run it only if every expression has a correct type.
+On the other hand, a dynamic type system checks the type of the expression during runtime, inserting checks to ensure that operations between values can be applied (it usually does not make sense to add a number to a string).
+
+%Every approach has its weaknesess and advantages. A strong static type system can ensure that there will be no type error during runtime, but at cost of programmers time, because its more time comsuming to write a program where every expression has to have a correct type.
+%A dynamic type system allow the programmer to write programs faster, but at cost of reliability and robustness.
+
+A programming language with a static or a dynamic type system have its strengths and weaknesses.
+If you have a static type system, you can guarantee that there will not be runtime type errors, but from the perspective of a programmer, a simple solution can become tedious because of the rigurosity of the language.
+In contrast, if you have a dynamic type system, it becomes easier to write programs, but you may encounter type errors at runtime (losing reliability) and your programs may be slower due to runtime type checking.
+
+The idea of combining both worlds has been around for a long time, and many attempts has been made to accomplish such goal.
+Siek and Taha in 2006 \cite{Siek2006GradualTF} introduced \textit{gradual typing};
+a type system that lets the programmer choose between static and dynamic typing in the same language, by letting them choose which terms to annotate, and which to leave without a defined type.
+When first defined, a solution based on intuition was presented.
+It consisted of a $\lambda$-calculus ($\lambda^{?}_{\rightarrow}$) that introduced the \textit{unknown} type, which refers to an unannotated term.
+This means that statically there could be terms which the type system is not sure what its real type is.
+For example, let's introduce the following program in a language with $\lambda$'s, \textit{int}'s and \textit{bool}'s:
+
+\begin{lstlisting}[language=Lambda]
+let foo(x: int) : int = x + 1 in foo(1);
+\end{lstlisting}
+
+This program will not throw an static type error, because the function foo expects an \textit{int} and an \textit{int} is given.
+Now, let's introduce a similar program, but in a gradual language:
+
+\begin{lstlisting}[language=Lambda]
+let foo(x: ?) : int = x + 1 in foo(1);
+\end{lstlisting}
+
+In this version, we declared the argument of the function \textit{foo} as \textit{unknown} (denoted by $?$).
+What Siek and Taha \cite{Siek2006GradualTF} intuited was that this program should be accepted by a gradual type system, because declaring the argument $x$ as $?$ means that $x$ can be any type, thus it can be an int.
+
+Now, what happens when we have a program like the following:
+
+\begin{lstlisting}[language=Lambda]
+let foo(x: ?) : int = x + 1 in foo(true);
+\end{lstlisting}
+
+In this case, the program also should be accepted by the type system, but it should throw a type error at runtime because a boolean can not be added to an int.
+
+Now that we can have $?$, then the type system can not expect every term to have its type equal to the expected type to accept a program.
+Thus, \textit{Type Consistency}, a new relation between types, was instroduced.
+In short terms, every type is consistent with $?$ and with itself, and is not with a type different from itself.
+A gradual type system expect types to be consistent to each other in order to accept a program.
+% In this sense we could say that a gradual type system takes care about all the typed parts of a program, and leaves the untyped parts to the dynamic rules of the language.
+
+This relaxation introduces the posibility of dynamic type error, therefore, the dynamic part of the language should take care of them.
+
+%Tengo dudas en esta parte (language dynamics). Preguntarle al profe como funciona exactamente, para asi explicarlo mejor en caso de ser necesario
+For the dynamic part of the language, a translation is made from $\lambda^{?}_{\rightarrow}$ into an intermediate $\lambda$-calculus with implicit casts $\lambda^{}_{\rightarrow}$.
+In simple terms, this intermediate language adds casts at some points of the evaluation to assert that the type of the gotten term is consistent with what was expected.
+If they are not, then a \textit{CastError} is thrown.
+
+
+This construction had type safety proven, which means that this language will have no type violations at runtime; they are caught staticaly or dynamically.
+In other words, well typed programs will not have uncontrolled type errors.
+
+% This definition had some important proof related to it.
+% It had type safety proven, which means that this language will have no type violations at runtime; they are caught staticaly or dynamically.
+% In other words, well typed programs will not have type error.
+% Also important, a theorem that stated that fully annotated programs in $\lambda^{?}_{\rightarrow}$
+% behaved the same way as in the simply typed counter part of $\lambda^{?}_{\rightarrow}$.
+%
+% Although this work captured the escence of gradual typing, 
+
+Siek et al in 2015 \cite{siek_et_al:LIPIcs.SNAPL.2015.274} realized that a more formal characterization was required in order to define what gradual typing is, because the term was being used to refer to any integration between static and dynamic typing.
+They introduced the a new formal property called the \textit{gradual guarantee}, that in simple words states that is a gradually typed program is well typed, then removing type annotations from it should; 1) not affect its well typeness, 2) not affect in the result it gives (the value given by the original version should be equivalent to the one with removed type anotations).
+
+Other criteria discussed in this paper state that a gradually typed language should include the untyped and typed versions of it, and that, when a program is fully typed in the gradual version, it should behave the same as in the typed version.
+This also applies to the fully untyped programs and the untyped version on the language.
+
+
+What we have discussed until this point has been the pilars of what a gradually typed language is and how it should behave, and ilustrated it with a simple lambda calculus.
+What if we want to create a gradually typed language with real world applications, including features modern mainstream languages have, like Python or JavaScript?
+
+%Parrafo para mostrar las features en las que se a logrado aplicar gradual typing
+
+A lot of effort has been made to accomplish such goal, and a lot of language features has been succesfuly gradualized, like ...
+
+Just like Siek and Taha in 2006, most of these gradual type systems have been intuitively designed, and it becomes even more challenging as the type system becomes more sophisticated.
+
+In 2015, Garcia et al. \cite{10.1145/2914770.2837670} introduced Abstracting Gradual Typing (AGT), a framework to gradualize static type systems that is based on abstract interpretation.
+Given a static type system, 
+
+\section{Related work}
+
+Texto...
+
+\section{Problem}
+
+Texto 
+
+\section{Research questions}
+
+....
+
+\section{Hypothesis}
+
+
+\section{Main Goal}
+
+
+\section{Specific goals}
+
+\begin{itemize}
+\item goal 1
+\end{itemize}
+
+\section{Methodology}
+
+texto
+
+\section{Expected results}
+
+ y contribuciones
+
+\nocite{*}
+\bibliographystyle{eptcs}
+\bibliography{bibliography}
+\end{document}
