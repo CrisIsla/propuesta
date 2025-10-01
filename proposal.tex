@@ -136,39 +136,49 @@ This difficulty comes from the lack of formality in concepts and definitions reg
 
 
 In 2015, Garcia et al. introduced Abstracting Gradual Typing (AGT) \cite{10.1145/2914770.2837670}, a framework based on abstract interpretation that provides a set of formal tools and definitions to gradualize a static type system.
-Also, it was prooven that the derived gradual type system will sathisfy some formal properties by cosntruction, like \textit{type safefty}, the \textit{gradual guarantee} and ...
+Also, it was proven that the derived gradual type system will satisfy some formal properties by construction, in particular, 
+the refined criteria for gradual typing established by Siek et al. \cite{siek_et_al:LIPIcs.SNAPL.2015.274}, that includes \textit{type safety} and the \textit{gradual guarantee}.
+
+%No se con cuanto detalle explicar como funciona AGT. Me imagino que los dynamics los tengo que explicar más a fondo, porque con eso voy a trabajar.
 
 \section{Related work}
 
-Texto...
+The results obtained by Grift \cite{grift} are unpredictable in some cases, which can make some programs several times slower compared to the fully typed version.
 
 \section{Problem}
 
-Texto 
+The current implementation of Toy Compiler with compact data structures has a considerable overhead when tested, specially with lambda application.
 
 \section{Research questions}
 
-....
+The questions regarding this thesis are the following:
+\begin{itemize}
+  \item an the current implementation of Toy Compiler be optimized so that the lambda application does not present a considerable overhead
+  \item 
+\end{itemize}
+
 
 \section{Hypothesis}
 
+The current implementation of Toy Compiler can be optimized, using compact data structures, in such way that the overhead between every language features is consistent.
 
-\section{Main Goal}
 
-
-\section{Specific goals}
-
-\begin{itemize}
-\item goal 1
-\end{itemize}
-
-\section{Methodology}
-
-texto
-
-\section{Expected results}
-
- y contribuciones
+% \section{Main Goal}
+%
+%
+% \section{Specific goals}
+%
+% \begin{itemize}
+% \item goal 1
+% \end{itemize}
+%
+% \section{Methodology}
+%
+% texto
+%
+% \section{Expected results}
+%
+%  y contribuciones
 
 \nocite{*}
 \bibliographystyle{eptcs}
