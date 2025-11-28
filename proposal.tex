@@ -5,15 +5,15 @@
 
 \lstdefinelanguage{Lambda}{%
   morekeywords={%
-    if,then,else,fix % keywords go here
+    if,then,else,fix,fun,let % keywords go here
   },%
-  morekeywords={[2]int},   % types go here
+  morekeywords={[2]int, bool},   % types go here
   otherkeywords={:}, % operators go here
   literate={% replace strings with symbols
     {->}{{$\to$}}{2}
     {lambda}{{$\lambda$}}{1}
   },
-  basicstyle={\sffamily},
+  basicstyle={\ttfamily},
   keywordstyle={\bfseries},
   keywordstyle={[2]\itshape}, % style for types
   keepspaces,
@@ -21,7 +21,7 @@
 }[keywords,comments,strings]%
 \setlength{\parindent}{2em}   % choose your indent width
 
-\title{Optimizing Toy Compiler with Compact Data Structures}
+\title{Optimizing GrEv}
 \author{ 
 \institute{Department of Computer Science\\
 University of Chile\\
@@ -32,9 +32,11 @@ Santiago, Chile}
 
 \section{Introduction}
 
+% background: existencia de grev, que quiero poder evaluar de mejor manera y optimizar
+
 Every programming language has its own way of dealing with types of expressions.
 Some of them require the programmer to specify types, this is, whether it is a number, a string, or something else.
-Others infer types just by looking at the expressions, and others simply don't know what the type of the expression is.
+Others infer types just by looking at the expressions, and others simply don't know what the type of the expression is until they encounter them in runtime.
 The way a language determines the type of its expressions is called a type system, and there are two main approaches; static and dynamic.
 
 A static type system checks and determines the type of each expression before running the program, and lets the user run it only if every expression has a correct type.
@@ -44,7 +46,7 @@ On the other hand, a dynamic type system checks the type of the expressions duri
 %A dynamic type system allow the programmer to write programs faster, but at cost of reliability and robustness.
 
 A programming language with a static or a dynamic type system have its strengths and weaknesses.
-If you have a static type system, you can guarantee that there will not be runtime type errors, but from the perspective of a programmer, a simple solution can become tedious because of the rigurosity of the language.
+If you have a static type system, you can guarantee that there will not be runtime type errors, but from the perspective of a programmer, a simple solution can become tedious because of the lack of flexibility.
 In contrast, if you have a dynamic type system, it becomes easier to write programs, but you may encounter type errors at runtime (losing reliability) and your programs may be slower due to runtime type checking.
 
 The idea of combining both worlds has been around for a long time, and many attempts has been made to accomplish such goal.
@@ -67,7 +69,7 @@ let foo: ? -> int = fun x -> x + x in foo 1;
 \end{lstlisting}
 
 In this version, we declared the argument of \textit{foo} as \textit{unknown} (denoted by $?$).
-What Siek and Taha \cite{Siek2006GradualTF} intuited was that this program should be accepted by a gradual type system, because declaring the argument $x$ as $?$ means that $x$ can be any type, thus it can be an int.
+What Siek and Taha \cite{Siek2006GradualTF} intuited was that this program should be accepted by a gradual type system, because declaring the argument $x$ as $?$ means that $x$ can be any type, thus it can be an \texit{int}.
 
 Now, what happens when we have a program like the following:
 
@@ -81,7 +83,7 @@ Now that we can have $?$, then the type system can not expect every term to have
 Thus, \textit{type consistency} (denoted by $\sim$), a new relation between types, was instroduced.
 In short terms, every type is consistent with $?$ and with itself, and is not with a type different from itself.
 This also applies to arrow types, where $\sigma_{1} \rightarrow \sigma_{2} \sim \tau_{1} \rightarrow \tau_{2}$ iff $\sigma_{1} \sim \tau_{1}$ and $\sigma_{2} \sim \tau_{2}$.
-A gradual type system expect types to be consistent to each other in order to accept a program.
+Type consistency allows a gradual type checker to know when to accept a program; if every function argument is consistent with its expected type, then there should be no problem.
 % In this sense we could say that a gradual type system takes care about all the typed parts of a program, and leaves the untyped parts to the dynamic rules of the language.
 
 This relaxation introduces the posibility of dynamic type errors, therefore, the dynamic part of the language should take care of them.
@@ -119,11 +121,10 @@ In other words, well typed programs will not have uncontrolled type errors.
 % Although this work captured the escence of gradual typing, 
 
 Siek et al in 2015 \cite{siek_et_al:LIPIcs.SNAPL.2015.274} realized that a more formal characterization was required in order to define what gradual typing is, because the term was being used to refer to any integration between static and dynamic typing.
-They introduced the a new formal property called the \textit{gradual guarantee}, that in simple words states that if a gradually typed program is well typed, then removing type annotations from it should; 1) not affect its well typeness, 2) not affect in the result it gives (the value given by the original version should be equivalent to the one with removed type anotations).
+They introduced a new formal property called the \textit{gradual guarantee}, that in simple words states that if a gradually typed program is well typed, then removing type annotations from it should; 1) not affect its well typeness, 2) not affect in the result it gives (the value given by the original version should be equivalent to the one with removed type anotations).
 
 Other criteria discussed in this paper states that a gradually typed language should include the untyped and typed versions of it, and that, when a program is fully typed in the gradual version, it should behave the same as in the typed version.
 This also applies to the fully untyped programs and the untyped version on the language.
-
 
 What we have discussed until this point has been the pillars of what a gradually typed language is and how it should behave, and illustrated it with a simple lambda calculus.
 % What if we want to create a gradually typed language with real world applications, including features modern mainstream languages have, like Python or JavaScript?
@@ -139,11 +140,28 @@ In 2015, Garcia et al. introduced Abstracting Gradual Typing (AGT) \cite{10.1145
 Also, it was proven that the derived gradual type system will satisfy some formal properties by construction, in particular, 
 the refined criteria for gradual typing established by Siek et al. \cite{siek_et_al:LIPIcs.SNAPL.2015.274}, that includes \textit{type safety} and the \textit{gradual guarantee}.
 
+For the statics semantics, types, predicates and functions are lifted into their gradual counterpart in such a way so that they; 1) work just the same as the static version when when all types are specified, and 2) they accept $?$ as a type. This new gradual version of the lenguage complies the properties discussed in Siek et al. \cite{siek_et_a:LIPIcs.SNAPL.2015.274} and type safety.
+
+While in the statics part we care about if our typing holds, during runtime we care about why it still holds.
+That's why a new system is built that introduces \textit{evidence}, that in basic terms is information about an unknown type that is updated using other types in the program.
+
+To elaborate on the intuition, let's analyze how the following program should run:
+
+\begin{lstlisting}[language=Lambda]
+let add1 = fun x -> x + 1 in
+add1 true;
+\end{lstlisting}
+
+The function \textit{add1} is declared $?$ (we are not specifing its type), so the expression ***add1 true*** should be accepted.
+The dynamic part starts 
+
 %No se con cuanto detalle explicar como funciona AGT. Me imagino que los dynamics los tengo que explicar más a fondo, porque con eso voy a trabajar.
 
 \section{Related work}
 
-The results obtained by Grift \cite{grift} are unpredictable in some cases, which can make some programs several times slower compared to the fully typed version.
+In 2019, Kuhlenschmidt and colleagues presented Grift \cite{grift}, a compiler that uses coercion to optimize structural types.
+The input language presents some difficult features like first-class functions, mutable arrays and recursive types.
+Even though the optimization worked in most cases, the results obtained by Grift are unpredictable in some of them, which can make some programs several times slower compared to the fully typed version.
 
 \section{Problem}
 
@@ -153,7 +171,7 @@ The current implementation of Toy Compiler with compact data structures has a co
 
 The questions regarding this thesis are the following:
 \begin{itemize}
-  \item an the current implementation of Toy Compiler be optimized so that the lambda application does not present a considerable overhead
+  \item Can the current implementation of Toy Compiler be optimized so that the lambda application does not present a considerable overhead
   \item 
 \end{itemize}
 
