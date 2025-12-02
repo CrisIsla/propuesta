@@ -50,34 +50,34 @@ The core difficulty lies in enforcing soundness without having considerable perf
 % Consequently, the central research challenge in this field is the development of compilation techniques and runtime memory representations that minimize this interoperability overhead.
 
 To date, the Grift compiler stands as the reference implementation for high-performance, close-to-the-metal gradual typing.
-Grift employs a coersion-based approach, where type consistency checks are reified as "coersions" (specialized data structures representing the path between source and target types).
+Grift employs a coercion-based approach, where type consistency checks are reified as "coercions" (specialized data structures representing the path between source and target types).
 
 An alternative, and theoretically distinct, approach is Abstracting Gradual Typing (AGT).
 AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
-This model uses evidence, a runtime values that serves as justification for plausibility of a consistent typing judgment, to check for types.
+This model uses evidence; a runtime value that serves as justification for plausibility of a consistent typing judgment, to check for types.
 
 The GrEv compiler represents the first attempt to build a high-performance compiler based on evidence.
+The compiler has different semantic modes that change the way the language interacts with evidence.
+This modes are GrEv/G (proxy, supports "normal" gradual typing semantics), GrEv/MC (monotonic closures) and GrEv/MV (monotonic values).
 Preliminary evaluations indicate that GrEv is not only competitive with Grift but outperforms it in specific scenarios.
 Also, results show that GrEv is more stable across configurations on the static-to-dynamic spectrum.
+Despite it's great results, there still is a lot of room for improvement, and one of the biggest overheads that GrEv has is its evidence memory representation.
 
-This thesis proposal aims to advance the state of the art of evidence-based gradual typing by extending the GrEv compiler.
-Despite it's great initial results, GrEv currently does not have a lot optimizations that can improve its performance despite the configuration being used, like hashconsing...
-Also, currently the compiler is being evaluated on a limited set of benchmarks, failing to address the broader and more rigurous Gradual Typing Performance (GTP) benchmarks suite.
-This research aims to improve GrEv's results and metrics by implementing optimizations on evidence representation and expanding GrEv's capabilities to the full GTP suite.
+This thesis proposal aims to advance the state of the art of evidence-based gradual typing by exploring and implementing optimizations on memory representation of evidence on GrEv.
 
 \section{Related Work}
 
 To understand the necessity of the proposed research, one must first analyze the mechanisms employed by the current state-of-the-art compilers, Grift and GrEv.
 
-\subsubsection{Grift: Coersions and Space Efficiency}
+\subsection{Grift: Coercions and Space Efficiency}
 
 Grift serves as the reference implementation for coercion-based gradual typing. 
 In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculusm and this casts are then compiled into coercions.
-One of the main challenges in this systems is that coersions can be accumulated.
+One of the main challenges in this systems is that coercions can be accumulated.
 For example, consider a function that is passed from a typed module to an untyped module and back again multiple times.
 In a naive implementation, each boundary crossing adds a new wrapper to the function, wasting a lot of memory.
-Grift mitigates this problem via coersion composition.
-Whenever a new coersion is applied to an already coerted value, the runtime system attempts to compose the new coersion with the existing one.
+Grift mitigates this problem via coercion composition.
+Whenever a new coercion is applied to an already coerted value, the runtime system attempts to compose the new coercion with the existing one.
 If the coercions are inverses (casting \textit{Int} to \textit{?} and then back to \textit{Int}, for example), they cancel each other out, and the wrapper is removed.
 If they are compatible, they are merged into a canonical form.
 This normalization process ensures that the space overhead of wrappers remains bounded.
@@ -90,37 +90,108 @@ However, this requires every read and write operation to go through the proxy to
 Grift's monotonic mode (GriftMS) makes it so that every time a reference is cast to a more precise type, the original heap cell is updated.
 If the cell contains a structure, it is recursively traversed to ensure all reachable values conform to the new type.
 
-\subsubsection{GrEv: Evidence-based Compilation}
+\subsection{GrEv: Evidence-based Compilation}
 
 GrEv represents a paradigm shift, implementing the runtime semantics of AGT directly.
 Instead of translating types into coercions, GrEv preserves the structure of gradual types at runtime in the form of evidence.
-Evidence is a runtime value that justifies why a specific program term is consistent with a specific type.
+To better understand what evidence is, we first need to introduce some concepts:
 
+\subsubsection{Undestanding evidence}
 
+\subsubsection{Concretization}
 
-\section{Related work}
+Gradual types can be understood as supertypes that represent more than one static type. For example, the unknown type $?$ represents every static type.
+The concretization function ($\gamma$) maps a gradual type to the set of static types it represents.
+For precise types (like int or bool), the mapping is singular:
 
-In 2019, Kuhlenschmidt and colleagues presented Grift \cite{grift}, a compiler that uses coercion to optimize structural types.
-The input language presents some difficult features like first-class functions, mutable arrays and recursive types.
-Even though the optimization worked in most cases, the results obtained by Grift are unpredictable in some of them, which can make some programs several times slower compared to the fully typed version.
+$$\gamma(int) = {int}$$
+
+and, as we said before, the unknown type $?$ concretizes to the set of all possible static types in the language:
+
+$$\gamma(?) = TYPE$$
+
+Structural types propagate this relation. A gradual function type $G_1 \rightarrow G_2$ concretizes to the set of all static function types $T_1 \rightarrow T_2$ where $T_1$ is the concretization of $G_1$ and $T_2$ is the concretization of $G_2$.
+
+With this definition we can think about \textbf{presicion}.
+A gradual type $G_1$ is less precise than $G_2$ if the set of static types represented by $G_1$ (i.e. its concretization) is a superset of those represented by $G_2$.
+
+\subsubsection{Consistency}
+
+In a static system, type checking relies on equality (or subtyping to be more precise, but in this thesis this case will not be considered).
+In a gradual system, this requirement is relaxed to consistency (denoted by $\sim$).
+We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$.
+
+$$G_1 \sim G_2 \Leftrightarrow \gamma (G_1) \cap \gamma (G_2) \ne \emptyset$$
+
+This explains why $int$ is consistent with $?$ ($int$ is in the set of all types), but not consistent with $bool$.
+A very important detail is that \textbf{consistency is not transitive}.
+If it were, we could have something like the following:
+
+$$int\sim ? \hat ?\sim bool \Rightarrow int\sim bool$$
+
+which breaks everything.
+
+\subsubsection{Consistent transitivity}
+
+As we saw, consistensy is not transitive.
+This brings a problem; while in a fully static language we can make sure that every type is equal to the expected type, in a gradual setting we can not statically make sure that the transitivity of consistency between types is valid.
+This task is passed on to the dynamic system, which makes sure that the transitivity between two consistent judgements is valid.
+Lets introduce the following program:
+
+\begin{lstlisting}[language=Lambda]
+let double: ? = fun x -> x + x in 
+  double true;
+\end{lstlisting}
+
+We have a function \textit{double} with type $?$ that expects its parameter to be an $int$ (we know that because its definition has the $+$ operator, that is only valid with $int$), but we call it with the value \textit{true} of type $bool$.
+We know statically that $bool \sim ?$ and $? \sim int$, but in this case the transitivity is not valid because \textit{bool} is not consistent with \textit{int}.
+
+To solve this problem, AGT proposes the use of \textit{evidence} to make sure that the transitivity between this consistenty judgements holds.
+Evidence is a runtime object that justifies a specific consistency judgement. 
+As a value flows from a context to another (like in the example), evidence is checked to see if the types are compatible, and combined into a more precise state.
+This operation is called \textit{Consistent Transitivity}.
+
+\subsubsection{Evidence}
+
+We can think about the evidence of a gradual type as a pair of types that 
+
+\subsection{GrEv modes}
+
+As stated in the introduction, GrEv supports different semantic modes that interacts with evidence in different ways.
+To ilustrate the semantic each of the modes supports, let's introduce the following program:
+
+\begin{lstlisting}[language=Lambda]
+let double: ? = fun x -> x + x in 
+  foo 1;
+  foo 1.0
+\end{lstlisting}
+
+\subsubsection{GrEv/G: Proxy}
+
+GrEv/G uses proxys 
+
+\subsubsection{GrEv/MC: Monotonic closures}
+\subsubsection{GrEv/MV: Monotonic values}
+
+EXPLICAR CON MAYOR DETALLE QUE ES LA EVIDENCIA, COMO ESTA IMPLEMENTADA, Y LOS DIFERENTES MODOS QUE PRESENTA GREV
 
 \section{Problem}
 
-The current implementation of Toy Compiler with compact data structures has a considerable overhead when tested, specially with lambda application.
+GREV NO TIENE BENCHMARKS ESTANDARIZADOS, Y NO TIENE TODAS LAS FUNCIONALIDADES NECESARIAS PARA USAR GTP
 
 \section{Research questions}
 
 The questions regarding this thesis are the following:
-\begin{itemize}
-  \item Can the current implementation of Toy Compiler be optimized so that the lambda application does not present a considerable overhead
-  \item 
-\end{itemize}
-
 
 \section{Hypothesis}
 
-The current implementation of Toy Compiler can be optimized, using compact data structures, in such way that the overhead between every language features is consistent.
+\section{Objectives}
 
+\section{Methodology}
+
+\section{Contributions}
+
+\section{Conclusion}
 
 % \section{Main Goal}
 %
