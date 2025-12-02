@@ -1,0 +1,145 @@
+\documentclass[submission]{eptcs}
+\setlength{\parindent}{0pt}
+\providecommand{\event}{} % Name of the event you are submitting to
+\usepackage{listings}
+
+\lstdefinelanguage{Lambda}{%
+  morekeywords={%
+    if,then,else,fix,fun,let % keywords go here
+  },%
+  morekeywords={[2]int, bool},   % types go here
+  otherkeywords={:}, % operators go here
+  literate={% replace strings with symbols
+    {->}{{$\to$}}{2}
+    {lambda}{{$\lambda$}}{1}
+  },
+  basicstyle={\ttfamily},
+  keywordstyle={\bfseries},
+  keywordstyle={[2]\itshape}, % style for types
+  keepspaces,
+  mathescape % optional
+}[keywords,comments,strings]%
+\setlength{\parindent}{2em}   % choose your indent width
+
+\title{Optimizing GrEv}
+\author{ 
+\institute{Department of Computer Science\\
+University of Chile\\
+Santiago, Chile}
+}
+\begin{document}
+\maketitle
+
+\section{Introduction}
+
+% background: existencia de grev, que quiero poder evaluar de mejor manera y optimizar
+
+In the world of software engineering we often find ourselves in the dilema of choosing between two distinct tools: a flexible dynamic typed language, or a reliable staticly typed one.
+On one side, dynamicaly typed languages like Python and JavaScript prioritize developer flexibility, rapid prototyping and expressiveness by deferring type checking to runtime.
+On the other side, statically typed languages like OCaml and Rust prioritize early error detection, correctness and performance through ahead-of-time type verification.
+Gradual typing has emerged as the principal option to reconcile this opposing paradigms, allowing a single language to support both disciplines seamlessly.
+By enabling developers to control the presicion of static type checking at a fine-grained level (down to individual function arguments or variable bindings) gradual typing promises to 
+deliver the best of both worlds, facilitating the evolution of scripts into robust applications without necessitating a complite rewrite in a different language.
+
+However, the practical realization of gradual typing comes with significant engineering challenges.
+The core difficulty lies in enforcing soundness without having considerable performance overheads.
+
+% However, the realization of this promise is fundamentally constrained by the "performance cliff".
+% Sound gradual typing requires that the runtime system enforce the invariants assumed by statically typed code components when they interact with dynamically typed (or less precisely typed) components.
+% If this checks are inefficient, the overhead of mixing types can result in performance degradation so severe that it renders the gradual language impractical for production use.
+% Consequently, the central research challenge in this field is the development of compilation techniques and runtime memory representations that minimize this interoperability overhead.
+
+To date, the Grift compiler stands as the reference implementation for high-performance, close-to-the-metal gradual typing.
+Grift employs a coersion-based approach, where type consistency checks are reified as "coersions" (specialized data structures representing the path between source and target types).
+
+An alternative, and theoretically distinct, approach is Abstracting Gradual Typing (AGT).
+AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
+This model uses evidence, a runtime values that serves as justification for plausibility of a consistent typing judgment, to check for types.
+
+The GrEv compiler represents the first attempt to build a high-performance compiler based on evidence.
+Preliminary evaluations indicate that GrEv is not only competitive with Grift but outperforms it in specific scenarios.
+Also, results show that GrEv is more stable across configurations on the static-to-dynamic spectrum.
+
+This thesis proposal aims to advance the state of the art of evidence-based gradual typing by extending the GrEv compiler.
+Despite it's great initial results, GrEv currently does not have a lot optimizations that can improve its performance despite the configuration being used, like hashconsing...
+Also, currently the compiler is being evaluated on a limited set of benchmarks, failing to address the broader and more rigurous Gradual Typing Performance (GTP) benchmarks suite.
+This research aims to improve GrEv's results and metrics by implementing optimizations on evidence representation and expanding GrEv's capabilities to the full GTP suite.
+
+\section{Related Work}
+
+To understand the necessity of the proposed research, one must first analyze the mechanisms employed by the current state-of-the-art compilers, Grift and GrEv.
+
+\subsubsection{Grift: Coersions and Space Efficiency}
+
+Grift serves as the reference implementation for coercion-based gradual typing. 
+In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculusm and this casts are then compiled into coercions.
+One of the main challenges in this systems is that coersions can be accumulated.
+For example, consider a function that is passed from a typed module to an untyped module and back again multiple times.
+In a naive implementation, each boundary crossing adds a new wrapper to the function, wasting a lot of memory.
+Grift mitigates this problem via coersion composition.
+Whenever a new coersion is applied to an already coerted value, the runtime system attempts to compose the new coersion with the existing one.
+If the coercions are inverses (casting \textit{Int} to \textit{?} and then back to \textit{Int}, for example), they cancel each other out, and the wrapper is removed.
+If they are compatible, they are merged into a canonical form.
+This normalization process ensures that the space overhead of wrappers remains bounded.
+
+Grift also presents an optimization on access to mutable state using monotonic references.
+In a traditional "guarded" approach, a mutable reference is wrapped in a proxy whenever it crosses a type boundary.
+This allows different parts of the program to have different, potentially incompatible views of the same heap cell.
+However, this requires every read and write operation to go through the proxy to get to the value.
+
+Grift's monotonic mode (GriftMS) makes it so that every time a reference is cast to a more precise type, the original heap cell is updated.
+If the cell contains a structure, it is recursively traversed to ensure all reachable values conform to the new type.
+
+\subsubsection{GrEv: Evidence-based Compilation}
+
+GrEv represents a paradigm shift, implementing the runtime semantics of AGT directly.
+Instead of translating types into coercions, GrEv preserves the structure of gradual types at runtime in the form of evidence.
+Evidence is a runtime value that justifies why a specific program term is consistent with a specific type.
+
+
+
+\section{Related work}
+
+In 2019, Kuhlenschmidt and colleagues presented Grift \cite{grift}, a compiler that uses coercion to optimize structural types.
+The input language presents some difficult features like first-class functions, mutable arrays and recursive types.
+Even though the optimization worked in most cases, the results obtained by Grift are unpredictable in some of them, which can make some programs several times slower compared to the fully typed version.
+
+\section{Problem}
+
+The current implementation of Toy Compiler with compact data structures has a considerable overhead when tested, specially with lambda application.
+
+\section{Research questions}
+
+The questions regarding this thesis are the following:
+\begin{itemize}
+  \item Can the current implementation of Toy Compiler be optimized so that the lambda application does not present a considerable overhead
+  \item 
+\end{itemize}
+
+
+\section{Hypothesis}
+
+The current implementation of Toy Compiler can be optimized, using compact data structures, in such way that the overhead between every language features is consistent.
+
+
+% \section{Main Goal}
+%
+%
+% \section{Specific goals}
+%
+% \begin{itemize}
+% \item goal 1
+% \end{itemize}
+%
+% \section{Methodology}
+%
+% texto
+%
+% \section{Expected results}
+%
+%  y contribuciones
+
+\nocite{*}
+\bibliographystyle{eptcs}
+\bibliography{bibliography}
+\end{document}
