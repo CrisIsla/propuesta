@@ -2,6 +2,7 @@
 \setlength{\parindent}{0pt}
 \providecommand{\event}{} % Name of the event you are submitting to
 \usepackage{listings}
+\usepackage[utf8]{inputenc}
 
 \lstdefinelanguage{Lambda}{%
   morekeywords={%
@@ -96,11 +97,37 @@ GrEv represents a paradigm shift, implementing the runtime semantics of AGT dire
 Instead of translating types into coercions, GrEv preserves the structure of gradual types at runtime in the form of evidence.
 To better understand what evidence is, we first need to introduce some concepts:
 
-\subsubsection{Undestanding evidence}
+% \begin{figure}[t]
+%   \begin{displaymath}
+%     \begin{array}{r@{\hspace{0.3em}}c@{\hspace{0.8em}}l@{\hspace{0.8em}}l}
+%       e & ::= & \fun{\overline{x: \cT}}{e} \mid e~e\ldots \mid x  & \text{(functions and variables)} \\
+%       & &  \mid n \mid f \mid \binop{e}{e} \mid \mathit{op}~e\ldots & \text{(integers, floats, and operators)} \\
+%       & &  \mid b \mid \ifthenelse{e}{e}{e}  & \text{(booleans and conditionals)} \\
+%       & &  \mid \loopit{x}{e}{e}{e} & \text{(loops)}\\
+%       & &  \mid\letin{x: \cT}{e}{e} \mid \letrecin{f: \cT}{e}{e} & \text{(let bindings)} \\
+%       & &  \mid\boxit{e} \mid \unbox{e} \mid \assign{e}{e} & \text{(references, unit)}\\
+%       &  &   \mid\vector{e}{e} \mid \vectorset{e}{e}{e} \mid \vectorget{e}{e}& \text{(vectors)} \\
+%       &  &  \mid\tuple{\overline{e}} \mid \proj{e}{e} & \text{(tuples)} \\
+%       & &  \mid \datastruct{N} \mid C~e\ldots  & \text{(variant definition and construction)} \\
+%       & &  \mid \match{e} & \text{(variant elimination)} \\
+%       & & \mid e :: \cT \mid e ; e& \text{(ascriptions and sequences)} \\
+%       \cT & ::= & \tint \mid \tbool \mid \tfloat \mid \tref{\cT} \mid \tvec{\cT} 
+%       & \text{(types)} \\ 
+%       %\ttuple{\overline{\cT}}
+%       & & \mid \tunit \mid \cT * \cT \ldots \mid \tfun{(\overline{\cT})}{\cT} \mid N \mid \tunk  &  
+%     \end{array}
+%   \end{displaymath}
+%   \caption{\lang source syntax}
+%   % \mt{what is the second argument of vector? Are recursive types missing?}
+%   %\et{box/unbox/setbox or ml-style !, :=, ref}\et{finalize keywords and update lstlisting}
+%   % \et{fix syntax operators, list them}\et{what about unit?}}
+%   \label{fig:lang-syntax}
+% \end{figure} 
 
-\subsubsection{Concretization}
+\subsubsection{Concretization and Abstraction}
 
-Gradual types can be understood as supertypes that represent more than one static type. For example, the unknown type $?$ represents every static type.
+Gradual types can be understood as sets of static types. For example, the unknown type $?$ represents every static type.
+
 The concretization function ($\gamma$) maps a gradual type to the set of static types it represents.
 For precise types (like int or bool), the mapping is singular:
 
@@ -115,45 +142,87 @@ Structural types propagate this relation. A gradual function type $G_1 \rightarr
 With this definition we can think about \textbf{presicion}.
 A gradual type $G_1$ is less precise than $G_2$ if the set of static types represented by $G_1$ (i.e. its concretization) is a superset of those represented by $G_2$.
 
+The abstraction function ($\alpha$) maps a set of static types to the more precise gradual type that represents the set.
+For example:
+
+$$\alpha(\{int, bool\}) = ?$$
+
+or
+
+$$\alpha(\{int \rightarrow bool, int \rightarrow string\}) = int \rightarrow ?$$
+
 \subsubsection{Consistency}
 
-In a static system, type checking relies on equality (or subtyping to be more precise, but in this thesis this case will not be considered).
-In a gradual system, this requirement is relaxed to consistency (denoted by $\sim$).
+In a static system there could be different type relations, like equality, subtyping, containtment, etc.
+What AGT proposes is that, in order to get the statics semantics of a gradual system, this relations must be lifted into their gradual counterparts.
+
+The gradual counter part of equality is called consistency (denoted by $\sim$).
 We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$.
 
 $$G_1 \sim G_2 \Leftrightarrow \gamma (G_1) \cap \gamma (G_2) \ne \emptyset$$
 
 This explains why $int$ is consistent with $?$ ($int$ is in the set of all types), but not consistent with $bool$.
-A very important detail is that \textbf{consistency is not transitive}.
+A very important detail is that, different from equality, \textbf{consistency is not transitive}.
 If it were, we could have something like the following:
 
-$$int\sim ? \hat ?\sim bool \Rightarrow int\sim bool$$
+$$int\sim ? \land ? \sim bool \Rightarrow int \sim bool$$
 
 which breaks everything.
 
-\subsubsection{Consistent transitivity}
+\subsubsection{Evidence and Consistent Transitivity}
 
-As we saw, consistensy is not transitive.
-This brings a problem; while in a fully static language we can make sure that every type is equal to the expected type, in a gradual setting we can not statically make sure that the transitivity of consistency between types is valid.
-This task is passed on to the dynamic system, which makes sure that the transitivity between two consistent judgements is valid.
+AGT provides a direct dynamic semantics of gradual programs by applying proof reduction on gradual typing derivations.
+
+While in a fully static language equality between types is transitive, in a gradual setting we can not statically make sure that the transitivity of consistency between types is valid.
 Lets introduce the following program:
 
 \begin{lstlisting}[language=Lambda]
-let double: ? = fun x -> x + x in 
-  double true;
+let f: int -> int = fun x -> x + x in 
+  f (true :: ?)
 \end{lstlisting}
 
-We have a function \textit{double} with type $?$ that expects its parameter to be an $int$ (we know that because its definition has the $+$ operator, that is only valid with $int$), but we call it with the value \textit{true} of type $bool$.
-We know statically that $bool \sim ?$ and $? \sim int$, but in this case the transitivity is not valid because \textit{bool} is not consistent with \textit{int}.
+In this example, the function \textbf{\textit{f}} expects an \textit{int} and a value of type \textit{?} is given.
+This program type checks because $? \sim int$, but in runtime, as the argument of the function given is a boolean, we have a chain:
 
-To solve this problem, AGT proposes the use of \textit{evidence} to make sure that the transitivity between this consistenty judgements holds.
-Evidence is a runtime object that justifies a specific consistency judgement. 
-As a value flows from a context to another (like in the example), evidence is checked to see if the types are compatible, and combined into a more precise state.
-This operation is called \textit{Consistent Transitivity}.
+$$bool \sim ? \land ? \sim int$$
 
-\subsubsection{Evidence}
+So dynamically something must be done to justify this judgement.
 
-We can think about the evidence of a gradual type as a pair of types that 
+Evidence is a runtime object that carries information about the type of some value.
+This information is then used to justify the judgement.
+When two values are met in an operation?, their evidence is combined to check 
+In the example transitivity does not work, because $int \nsim bool$, and this is something that the dynamic system should be able to deduce.
+
+EXPLICACIÓN DE EVIDENCIA, Y CONSISTENT TRANSITIVITY
+
+When more complex types and relations are available (like subtyping, for example), evidence needs to be able to store the information about the types involved and the relations between them.
+GrEv only has simple types, so evidence can be represented as a single type.
+
+
+
+
+
+
+
+
+
+% We have a function \textit{double} with type $?$ that expects its parameter to be an $int$ (we know that because its definition has the $+$ operator, that is only valid with $int$), but we call it with the value \textit{true} of type $bool$.
+% We know statically that $bool \sim ?$ and $? \sim int$, but in this case the transitivity is not valid because \textit{bool} is not consistent with \textit{int}.
+%
+% To solve this problem, AGT proposes the use of \textit{evidence} to make sure that the transitivity between this consistenty judgements holds.
+% Evidence is a runtime object that justifies a specific consistency judgement. 
+% As a value flows from a context to another (like in the example), evidence is checked to see if the types are compatible, and combined into a more precise state.
+% This operation is called \textit{Consistent Transitivity}.
+
+\subsubsection{GrEv's evidence implementation}
+
+% Apart from GrEv's gradual modes, GrEv also has it's static and dynamic versions (StaticGrEv and DynGrEv, respectively).
+% This versions follow the basic principles of compilation for statically and dynamically typed languages.
+As mentioned before, the current implementation of GrEv only supports simple types, so evidence can be represented as a simple type.
+GrEv differentiate between inmmediate and boxed values.
+Boxed values have an specific field in memory that saves its evidence.
+For example, a reference is stored as two words (16 bytes), one as the evidence and the other as the value.
+Inmmediate values are tagged, so there is no need to have extra memory to get it's evidence.
 
 \subsection{GrEv modes}
 
@@ -166,18 +235,27 @@ let double: ? = fun x -> x + x in
   foo 1.0
 \end{lstlisting}
 
-\subsubsection{GrEv/G: Proxy}
-
-GrEv/G uses proxys 
-
 \subsubsection{GrEv/MC: Monotonic closures}
+
+GrEv/MC implements monotonic closures, this is, the evidence for a closure is global.
+This means that, when the evidence of the closure is updated, this affects every other application of the function.
+In the example, when \textit{foo} is applied to 1, its evidence is updated from \textit{?} to $int \rightarrow int$, thus its following application throws an error.
+
+
+\subsubsection{GrEv/G: Guarded}
+
+GrEv/G uses proxys to store values in the heap separated from their evidence.
+In this version, every time  the value of an evidence is updated, a shallow copy is created with a new memory cell that contains this update.
+In this case, after the first application of \textit{foo}, a new memory cell is created that contains the evidence $int \rightarrow int$, so the second application throws no error.
+
+
 \subsubsection{GrEv/MV: Monotonic values}
 
-EXPLICAR CON MAYOR DETALLE QUE ES LA EVIDENCIA, COMO ESTA IMPLEMENTADA, Y LOS DIFERENTES MODOS QUE PRESENTA GREV
+GrEv/MV uses monotonic evidences for every value in the language.
+In this sense, when the evidence of a reference, a vector, a closure, etc. is updated, it is updated globally and affects the following uses of that value.
 
 \section{Problem}
 
-GREV NO TIENE BENCHMARKS ESTANDARIZADOS, Y NO TIENE TODAS LAS FUNCIONALIDADES NECESARIAS PARA USAR GTP
 
 \section{Research questions}
 
