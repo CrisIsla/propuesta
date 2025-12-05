@@ -126,7 +126,8 @@ To better understand what evidence is, we first need to introduce some concepts:
 
 \subsubsection{Concretization and Abstraction}
 
-Gradual types can be understood as sets of static types. For example, the unknown type $?$ represents every static type.
+The key idea in the AGT framework is to view gradual types as abtractions of sets of static types, formally defined by a Galois connection.
+This connections define two functions, the concretization function $\gamma$ and the abstraction function $\alpha$, both functioning as a conection between sets which, in this case, are GTYPE (the set of all gradual types), and $P(TYPE)$ (the set of all sets that can be created from static types).
 
 The concretization function ($\gamma$) maps a gradual type to the set of static types it represents.
 For precise types (like int or bool), the mapping is singular:
@@ -156,8 +157,14 @@ $$\alpha(\{int \rightarrow bool, int \rightarrow string\}) = int \rightarrow ?$$
 In a static system there could be different type relations, like equality, subtyping, containtment, etc.
 What AGT proposes is that, in order to get the statics semantics of a gradual system, this relations must be lifted into their gradual counterparts.
 
-The gradual counter part of equality is called consistency (denoted by $\sim$).
-We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$.
+In a general manner, to lifting of a relation $R$ is denoted by:
+
+$$\tilde{R}(G_1, G_2) = \exists T_1 \in \gamma(G_1), T_2 \in \gamma(G_2), R(T_1, T_2)$$
+
+which in simple words means that $\tilde{R}$ of two gradual types $G_1$ and $G_2$ is valid if there exist two static types $T_1$ and $T_2$ in the sets that each gradual type represents where $R(T_1, T_2)$ is valid.
+
+In the case of GrEv, the only relation defined is equality, and its gradual counterpart is called consistency (denoted by $\sim$).
+We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$ (or in other words, if there exist two static types in each concretization that fulfill the relation i.e. are equal).
 
 $$G_1 \sim G_2 \Leftrightarrow \gamma (G_1) \cap \gamma (G_2) \ne \emptyset$$
 
@@ -182,18 +189,118 @@ let f: int -> int = fun x -> x + x in
 \end{lstlisting}
 
 In this example, the function \textbf{\textit{f}} expects an \textit{int} and a value of type \textit{?} is given.
-This program type checks because $? \sim int$, but in runtime, as the argument of the function given is a boolean, we have a chain:
+This program type checks because $? \sim int$, but in runtime, as the argument of the function given is a \textit{bool}, we have a chain:
 
 $$bool \sim ? \land ? \sim int$$
 
 So dynamically something must be done to justify this judgement.
 
-Evidence is a runtime object that carries information about the type of some value.
-This information is then used to justify the judgement.
-When two values are met in an operation?, their evidence is combined to check 
-In the example transitivity does not work, because $int$ is not consistent with $bool$, and this is something that the dynamic system should be able to deduce.
+Evidence is a runtime object that carries information about the type of some judgement, and has its own types $ETYPE$.
 
-EXPLICACIÓN DE EVIDENCIA, Y CONSISTENT TRANSITIVITY
+To illustrate a more general case, lets introduce a gradual language where static types are natural numbers, and the only relation between them is the "less than" comparison ($\leq$)
+
+Imagine now that we have the following judgement:
+
+$$ 5 \tilde\leq ? $$
+
+In order to justify this judgement, we must provide evidence that show us why this is valid.
+Using the definition of gradual types that represent a set of static types, this judgement is valid because $\gamma(?)$ contains various numbers that are greater or equal than 1 (in other words, there exist at least one type that suffies the lifting of the $\tilde\leq$ relation)
+Actually, we could use $ETYPE = GTYPE$ to justify this judgement, because there exist a type in $GTYPE$ whose concretization contains all the values that suffies the relation, that is, $\gamma(?)$, but this is not precise enough.
+That's why it's prefered in this case to use intervals as $ETYPE$, so in the case of the previos judgement, we can use the interval $[5, \infty]$.
+
+Evidence for this judgement would look like this:
+$$\langle[5, 5], [5, \infty]\rangle \vdash 5 \tilde\leq ?$$
+
+Note that, for the type \textit{5} we use the interval $[5, 5]$, because evidence must be expressed with $ETYPE$
+
+We define the interior of a judgement between two gradual types $G_1$ and $G_2$ with the relation $R$ ($I_R(G_1, G_2)$) like the following:
+
+$$I_R(G_1, G_2) = \alpha^{2}_E(\{\langle T_1, T_2 \rangle \mid T_1 \in \gamma(G_1), T_2 \in \gamma(G_2), R(T_1, T_2)\})$$
+
+This is the initial evidence of a judgement, and can be understood in two steps:
+\begin{enumerate}
+  \item First we calculate the two set of static type pairs $T_1$ and $T_2$ where the relation $R$ is valid.
+  \item Then, we calculate the abstraction from the TYPE set into the ETYPE set ($\alpha^{2}_E$)\footnote{$\alpha^2(\{\langle T_{i1}, T_{i2} \rangle, ...\}) = \langle \alpha(\{T_{i1}, ...\}), \alpha(\{T_{i2}, ...\}) \rangle$} to get the evidence type $E$ that better represents this two TYPE sets.
+\end{enumerate}
+
+Note that we are using an abstraction function between TYPE and ETYPE.
+In order to do this, a Galois connection between TYPE and ETYPE must be defined, including the abstraction and concretization functions.
+This functions follow the same definition given in the previously.
+
+Now we would like to define how to check whether the relation $R$ applies to two gradual types $G_1$ and $G_3$ applies, given that the relation applies between $G_1$ and $G_2$, and also between $G_2$ and $G_3$: 
+
+$$\epsilon_1 \vdash \tilde{R}(G_1, G_2) \land \epsilon_2 \vdash \tilde{R}(G_2, G_3) \Rightarrow \tilde{R}(G_1, G_2)$$
+
+For this, we need to check inside the evidences $\epsilon_1$ and $epsilon_2$, and see if there exists a subset of TYPEs in the intersection between the concretization of each part of the innermost part of this evidences, where the relation $R$ is valid.
+This operation is called \textit{Consistent Transitivity}, its denoted by $\circ^{R}$ and serves the functionality of checking whether a relation between two gradual types is valid evaluating transitivity.
+
+$$\epsilon_1 \circ^{R} \epsilon_2 = \langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle = \alpha(\{\langle T_1, T_4 \rangle \mid T_1 \in \gamma_E(E_1), T_4 \in \gamma_E(E_4), T_{2\cap 3} \in \gamma_E(E_2) \cap \gamma_E(E_3), R(T_1, T_{2\cap 3}) \land R(T_{2\cap 3}, T_4)\})$$
+
+This operation can be understood in N steps:
+
+\begin{enumerate}
+  \item First, we calculate the concretization $\gamma_E$ of every evidence type $E_i$ to get the set of static types $T_i$ that are represented by $E_i$.
+  \item Then, to justify transitivity we have to check if there exist a pair of TYPEs in the intersection of the innermost parts of the evidences we are checking\footnote{if $\langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle$, the inner part would be $E_2$ and $E_3$} that suffies the relation $R$.
+  \item If such pair exists, then the transitivity is justified and the evidence is updated with the outtermost parts of the evidences.
+  \item If such pair does not exist, then the transitivity is not justified, and the dynamic system should throw an error.
+\end{enumerate}
+
+Lets ilustrate this two operations with an example.
+We want to check consistent transitivity between the two following judgements:
+
+\begin{math}
+  10\tilde\leq ? \\
+  ?\tilde\leq 20
+\end{math}
+
+In order to check if $10 \tilde\leq 20$, we can use the $I_{\tilde\leq}$ and $\circ^{\tilde\leq}$.
+First, for notation sake, a set of numbers from $a$ to $b$ will be represented as $S_{[a, b]}$.
+Now, to calculate the interior, we calculate first the concretization of the gradual types:
+
+\begin{math}
+  \gamma(10) = \{10\} \\
+  \gamma(20) = \{20\} \\
+  \gamma(?) = Nat
+\end{math}
+
+
+With these, we can calculate the interior of the first judgement to get its initial evidence:
+
+\begin{math}
+  I_{\tilde\leq}(10, ?) = \alpha^{2}_{E}(\{\langle T_1, T_2\rangle \mid T_1 \in \{10\}, T_2 \in Nat, T_1 \leq T_2\}) \\
+  = \langle \alpha(\{10\}), \alpha(S_{[10, \infty]}) \rangle = \langle [10, 10], [10, \infty] \rangle
+\end{math}
+
+The same way, we can calculate the interior of the second judgement and get the following:
+
+\begin{math}
+  \langle [10, 10], [10, \infty] \rangle \vdash 10\tilde\leq ? \\
+  \langle [1, 20], [20, 20] \rangle \vdash ?\tilde\leq 20
+\end{math}
+
+Now, in order to check if the judgement, we have to calculate the consistent transitivity over the two evidences.
+The concretization of the evidences $\gamma_E$ is
+
+\begin{math}
+  \gamma_E([10, 10]) = \{10\} \\
+  \gamma_E([10, \infty]) = S_{[10, \infty]} \\
+  \gamma_E([1, 20]) = \{1, 2, ..., 20\} \\
+  \gamma_E([20, 20]) = \{20\}
+\end{math}
+
+and with that, the consistent transitivity of the evidences is:
+
+\begin{math}
+  \langle [10, 10], [10, \infty] \rangle \circ^{\tilde\leq} \langle [1, 20], [20, 20] \rangle \\
+  = \alpha(\{\langle T_1, T_4\rangle \mid T_1 = 10, T_4 = 20, T_{2\cap 3} \in \{10, 11, ..., 20\}, 10 \leq T_{2\cap 3} \land T_{2\cap 3} \leq 20\}) \\
+  \alpha(\langle 10, 20 \rangle) = \langle [10, 10], [20, 20] \rangle
+\end{math}
+
+Finally, because we could calculate the consistent transitivity, the judgement $10 \tilde\leq 20$ is valid:
+
+$$\langle [10, 10], [20, 20] \rangle \vdash 10 \tilde\leq 20$$
+
+
 
 When more complex types and relations are available (like subtyping, for example), evidence needs to be able to store the information about the types involved and the relations between them.
 GrEv only has simple types, so evidence can be represented as a single type.
