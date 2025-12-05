@@ -95,3 +95,31 @@ keywords = {benchmarks, gradual typing, performance, reproducibility},
 location = {Santa Cruz, CA, USA},
 series = {ACM REP '23}
 }
+@phdthesis{10.5555/AAI28000842,
+author = {Almahallawi, Deyaaeldeen and Tobin-Hochstad, Sam and Sabry, Amr and Leivant, Daniel},
+advisor = {Jeremy, Siek,},
+title = {Towards Efficient Gradual Typing via Monotonic References and Coercions},
+year = {2020},
+isbn = {9798662380936},
+publisher = {Indiana University},
+address = {USA},
+abstract = {Integrating static and dynamic typing into a single programming language enables programmers to choose which discipline to use in each code region. Different approaches for this integration have been studied and put into use at large scale, e.g. TypeScript for JavaScript and adding the dynamic type to C#. Gradual typing is one approach to this integration that preserves type soundness by performing type-checking at run-time using casts. For higher order values such as functions and mutable references, a cast typically wraps the value in a proxy that performs type-checking when the value is used. This approach suffers from two problems: (1) chains of proxies can grow and consume unbounded space, and (2) statically typed code regions need to check whether values are proxied. Monotonic references solve both problems for mutable references by directly casting the heap cell instead of wrapping the reference in a proxy. In this dissertation, an integration is proposed of monotonic references with the coercion-based solution to the problem of chains of proxies for other values such as functions. Furthermore, the prior semantics for monotonic references involved storing and evaluating cast expressions (not yet values) in the heap and it is not obvious how to implement this behavior efficiently in a compiler and run-time system. This dissertation proposes novel dynamic semantics where only values are written to the heap, making the semantics straightforward to implement. The approach is implemented in Grift, a compiler for a gradually typed programming language, and a few key optimizations are proposed. Finally, the proposed performance evaluation methodology shows that the proposed approach eliminates all overheads associated with gradually typed references in statically typed code regions without introducing significant average-case overhead.},
+note = {AAI28000842}
+}
+@InProceedings{10.1007/978-3-662-46669-8_18,
+author="Siek, Jeremy G.
+and Vitousek, Michael M.
+and Cimini, Matteo
+and Tobin-Hochstadt, Sam
+and Garcia, Ronald",
+editor="Vitek, Jan",
+title="Monotonic References for Efficient Gradual Typing",
+booktitle="Programming Languages and Systems",
+year="2015",
+publisher="Springer Berlin Heidelberg",
+address="Berlin, Heidelberg",
+pages="432--456",
+abstract="Gradual typing enables both static and dynamic typing in the same program and makes it convenient to migrate code regions between the two typing disciplines. One goal of gradual typing is to provide all the benefits of static typing, such as efficiency, in statically-typed regions. However, this goal is elusive: the standard approach to mutable references imposes run-time overhead in statically-typed regions and alternative approaches are too conservative, either statically or at run-time. In this paper we present a new semantics called monotonic references which imposes none of the run-time overhead of dynamic typing in statically typed regions. With this design, casting a reference may cause a heap cell to become more statically typed (but not less). Retaining type safety is challenging with strong updates to the heap. Nevertheless, we have a mechanized proof of type safety. Further, we present blame tracking for monotonic references and prove a blame theorem.",
+isbn="978-3-662-46669-8"
+}
+
