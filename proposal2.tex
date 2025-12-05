@@ -45,24 +45,24 @@ deliver the best of both worlds, facilitating the evolution of scripts into robu
 However, the practical realization of gradual typing comes with significant engineering challenges.
 The core difficulty lies in enforcing soundness without having considerable performance overheads.
 
-% However, the realization of this promise is fundamentally constrained by the "performance cliff".
+% However, the realization of this promise is fundamentally constrained by the ``performance cliff''.
 % Sound gradual typing requires that the runtime system enforce the invariants assumed by statically typed code components when they interact with dynamically typed (or less precisely typed) components.
 % If this checks are inefficient, the overhead of mixing types can result in performance degradation so severe that it renders the gradual language impractical for production use.
 % Consequently, the central research challenge in this field is the development of compilation techniques and runtime memory representations that minimize this interoperability overhead.
 
 To date, the Grift compiler stands as the reference implementation for high-performance, close-to-the-metal gradual typing.
-Grift employs a coercion-based approach, where type consistency checks are reified as "coercions" (specialized data structures representing the path between source and target types).
+Grift employs a coercion-based approach, where type consistency checks are reified as ``coercions'' (specialized data structures representing the path between source and target types).
 
-An alternative, and theoretically distinct, approach is Abstracting Gradual Typing (AGT).
+An alternative to this approach is Abstracting Gradual Typing (AGT).
 AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
 This model uses evidence; a runtime value that serves as justification for plausibility of a consistent typing judgment, to check for types.
 
 The GrEv compiler represents the first attempt to build a high-performance compiler based on evidence.
 The compiler has different semantic modes that change the way the language interacts with evidence.
-This modes are GrEv/G (proxy, supports "normal" gradual typing semantics), GrEv/MC (monotonic closures) and GrEv/MV (monotonic values).
+This modes are GrEv/G (proxy, supports ``normal'' gradual typing semantics), GrEv/MC (monotonic closures) and GrEv/MV (monotonic values).
 Preliminary evaluations indicate that GrEv is not only competitive with Grift but outperforms it in specific scenarios.
 Also, results show that GrEv is more stable across configurations on the static-to-dynamic spectrum.
-Despite its great results, there still is a lot of room for improvement, and one of the biggest overheads that GrEv has is its evidence memory representation.
+Despite its great results, there still is a lot of room for improvement, and the question about wether this results are because go the simplistic of the scenario or for other reasons arrises.
 
 This thesis proposal aims to advance the state of the art of evidence-based gradual typing by exploring and implementing optimizations on memory representation of evidence on GrEv.
 
@@ -74,7 +74,7 @@ To understand the necessity of the proposed research, one must first analyze the
 
 Grift serves as the reference implementation for coercion-based gradual typing. 
 In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculusm and this casts are then compiled into coercions.
-One of the main challenges in this systems is that coercions can be accumulated.
+One of the main challenges in this systems is that casts can be accumulated.
 For example, consider a function that is passed from a typed module to an untyped module and back again multiple times.
 In a naive implementation, each boundary crossing adds a new wrapper to the function, wasting a lot of memory.
 Grift mitigates this problem via coercion composition.
@@ -84,7 +84,7 @@ If they are compatible, they are merged into a canonical form.
 This normalization process ensures that the space overhead of wrappers remains bounded.
 
 Grift also presents an optimization on access to mutable state using monotonic references.
-In a traditional "guarded" approach, a mutable reference is wrapped in a proxy whenever it crosses a type boundary.
+In a traditional ``guarded'' approach, a mutable reference is wrapped in a proxy whenever it crosses a type boundary.
 This allows different parts of the program to have different, potentially incompatible views of the same heap cell.
 However, this requires every read and write operation to go through the proxy to get to the value.
 
@@ -132,13 +132,13 @@ This connections define two functions, the concretization function $\gamma$ and 
 The concretization function ($\gamma$) maps a gradual type to the set of static types it represents.
 For precise types (like int or bool), the mapping is singular:
 
-$$\gamma(int) = {int}$$
+$$\gamma(int) = \{int\}$$
 
 and, as we said before, the unknown type $?$ concretizes to the set of all possible static types in the language:
 
 $$\gamma(?) = TYPE$$
 
-Structural types propagate this relation. A gradual function type $G_1 \rightarrow G_2$ concretizes to the set of all static function types $T_1 \rightarrow T_2$ where $T_1$ is the concretization of $G_1$ and $T_2$ is the concretization of $G_2$.
+Structural types propagate this relation. A gradual function type $G_1 \rightarrow G_2$ concretizes to the set of all static function types $T_1 \rightarrow T_2$ where $T_1$ is in the concretization of $G_1$ and $T_2$ is in the concretization of $G_2$.
 
 With this definition we can think about \textbf{precision}.
 A gradual type $G_1$ is less precise than $G_2$ if the set of static types represented by $G_1$ (i.e. its concretization) is a superset of those represented by $G_2$.
@@ -157,11 +157,11 @@ $$\alpha(\{int \rightarrow bool, int \rightarrow string\}) = int \rightarrow ?$$
 In a static system there could be different type relations, like equality, subtyping, containtment, etc.
 What AGT proposes is that, in order to get the statics semantics of a gradual system, this relations must be lifted into their gradual counterparts.
 
-In a general manner, to lifting of a relation $R$ is denoted by:
+In a general manner, the lifting of a relation $R$ is denoted by:
 
 $$\tilde{R}(G_1, G_2) = \exists T_1 \in \gamma(G_1), T_2 \in \gamma(G_2), R(T_1, T_2)$$
 
-which in simple words means that $\tilde{R}$ of two gradual types $G_1$ and $G_2$ is valid if there exist two static types $T_1$ and $T_2$ in the sets that each gradual type represents where $R(T_1, T_2)$ is valid.
+which in simple words means that $\tilde{R}$ of two gradual types $G_1$ and $G_2$ holds if there exist two static types $T_1$ and $T_2$ in the sets that each gradual type represents where $R(T_1, T_2)$ holds.
 
 In the case of GrEv, the only relation defined is equality, and its gradual counterpart is called consistency (denoted by $\sim$).
 We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$ (or in other words, if there exist two static types in each concretization that fulfill the relation i.e. are equal).
@@ -180,7 +180,7 @@ which breaks everything.
 
 AGT provides a direct dynamic semantics of gradual programs by applying proof reduction on gradual typing derivations.
 
-While in a fully static language equality between types is transitive, in a gradual setting we can not statically make sure that the transitivity of consistency between types is valid.
+While in a fully static language equality between types is transitive, in a gradual setting we can not statically make sure that the transitivity of consistency between types holds.
 Lets introduce the following program:
 
 \begin{lstlisting}[language=Lambda]
@@ -197,14 +197,14 @@ So dynamically something must be done to justify this judgement.
 
 Evidence is a runtime object that carries information about the type of some judgement, and has its own types $ETYPE$.
 
-To illustrate a more general case, lets introduce a gradual language where static types are natural numbers, and the only relation between them is the "less than" comparison ($\leq$)
+To illustrate a more general case, lets introduce a gradual language where static types are natural numbers, and the only relation between them is the ``less than'' comparison ($\leq$)
 
 Imagine now that we have the following judgement:
 
 $$ 5 \tilde\leq ? $$
 
-In order to justify this judgement, we must provide evidence that show us why this is valid.
-Using the definition of gradual types that represent a set of static types, this judgement is valid because $\gamma(?)$ contains various numbers that are greater or equal than 1 (in other words, there exist at least one type that suffies the lifting of the $\tilde\leq$ relation)
+In order to justify this judgement, we must provide evidence that show us why this holds.
+Using the definition of gradual types that represent a set of static types, this judgement holds because $\gamma(?)$ contains various numbers that are greater or equal than 1 (in other words, there exist at least one type that suffies the lifting of the $\tilde\leq$ relation)
 Actually, we could use $ETYPE = GTYPE$ to justify this judgement, because there exist a type in $GTYPE$ whose concretization contains all the values that suffies the relation, that is, $\gamma(?)$, but this is not precise enough.
 That's why it's prefered in this case to use intervals as $ETYPE$, so in the case of the previos judgement, we can use the interval $[5, \infty]$.
 
@@ -219,7 +219,7 @@ $$I_R(G_1, G_2) = \alpha^{2}_E(\{\langle T_1, T_2 \rangle \mid T_1 \in \gamma(G_
 
 This is the initial evidence of a judgement, and can be understood in two steps:
 \begin{enumerate}
-  \item First we calculate the two set of static type pairs $T_1$ and $T_2$ where the relation $R$ is valid.
+  \item First we calculate the two set of static type pairs $T_1$ and $T_2$ where the relation $R$ holds.
   \item Then, we calculate the abstraction from the TYPE set into the ETYPE set ($\alpha^{2}_E$)\footnote{$\alpha^2(\{\langle T_{i1}, T_{i2} \rangle, ...\}) = \langle \alpha(\{T_{i1}, ...\}), \alpha(\{T_{i2}, ...\}) \rangle$} to get the evidence type $E$ that better represents this two TYPE sets.
 \end{enumerate}
 
@@ -231,8 +231,8 @@ Now we would like to define how to check whether the relation $R$ applies to two
 
 $$\epsilon_1 \vdash \tilde{R}(G_1, G_2) \land \epsilon_2 \vdash \tilde{R}(G_2, G_3) \Rightarrow \tilde{R}(G_1, G_2)$$
 
-For this, we need to check inside the evidences $\epsilon_1$ and $epsilon_2$, and see if there exists a subset of TYPEs in the intersection between the concretization of each part of the innermost part of this evidences, where the relation $R$ is valid.
-This operation is called \textit{Consistent Transitivity}, its denoted by $\circ^{R}$ and serves the functionality of checking whether a relation between two gradual types is valid evaluating transitivity.
+For this, we need to check inside the evidences $\epsilon_1$ and $epsilon_2$, and see if there exists a subset of TYPEs in the intersection between the concretization of each part of the innermost part of this evidences, where the relation $R$ holds.
+This operation is called \textit{Consistent Transitivity}, its denoted by $\circ^{R}$ and serves the functionality of checking whether a relation between two gradual types holds by evaluating transitivity.
 
 $$\epsilon_1 \circ^{R} \epsilon_2 = \langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle = \alpha(\{\langle T_1, T_4 \rangle \mid T_1 \in \gamma_E(E_1), T_4 \in \gamma_E(E_4), T_{2\cap 3} \in \gamma_E(E_2) \cap \gamma_E(E_3), R(T_1, T_{2\cap 3}) \land R(T_{2\cap 3}, T_4)\})$$
 
@@ -296,7 +296,7 @@ and with that, the consistent transitivity of the evidences is:
   \alpha(\langle 10, 20 \rangle) = \langle [10, 10], [20, 20] \rangle
 \end{math}
 
-Finally, because we could calculate the consistent transitivity, the judgement $10 \tilde\leq 20$ is valid:
+Finally, because we could calculate the consistent transitivity, the judgement $10 \tilde\leq 20$ holds:
 
 $$\langle [10, 10], [20, 20] \rangle \vdash 10 \tilde\leq 20$$
 
