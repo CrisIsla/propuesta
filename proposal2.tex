@@ -1,35 +1,19 @@
-\documentclass[submission]{eptcs}
+\documentclass[acmsmall, screen, nonacm]{acmart}
 \setlength{\parindent}{0pt}
 \providecommand{\event}{} % Name of the event you are submitting to
 \usepackage{listings}
 \usepackage[utf8]{inputenc}
+% \usepackage{lmodern} 
+\usepackage[framemethod=TikZ]{mdframed}
 
-\lstdefinelanguage{Lambda}{%
-  morekeywords={%
-    if,then,else,fix,fun,let % keywords go here
-  },%
-  morekeywords={[2]int, bool},   % types go here
-  otherkeywords={:}, % operators go here
-  literate={% replace strings with symbols
-    {->}{{$\to$}}{2}
-    {lambda}{{$\lambda$}}{1}
-  },
-  basicstyle={\ttfamily},
-  keywordstyle={\bfseries},
-  keywordstyle={[2]\itshape}, % style for types
-  keepspaces,
-  mathescape % optional
-}[keywords,comments,strings]%
-\setlength{\parindent}{2em}   % choose your indent width
+\input{definitions}
+%
+\graphicspath{
+  {figures/} % for drawings
+}
 
 \title{Optimizing evidence memory representation on GrEv; an evidence based gradual typing compiler.}
-\author{ 
-\institute{Department of Computer Science\\
-University of Chile\\
-Santiago, Chile}
-}
 \begin{document}
-\maketitle
 
 \section{Introduction}
 
@@ -50,18 +34,18 @@ The core difficulty lies in enforcing soundness without having considerable perf
 % If this checks are inefficient, the overhead of mixing types can result in performance degradation so severe that it renders the gradual language impractical for production use.
 % Consequently, the central research challenge in this field is the development of compilation techniques and runtime memory representations that minimize this interoperability overhead.
 
-To date, the Grift compiler stands as the reference implementation for high-performance, close-to-the-metal gradual typing.
+To date, the Grift compiler \ref{grift} stands as the reference implementation for high-performance, close-to-the-metal gradual typing.
 Grift employs a coercion-based approach, where type consistency checks are reified as ``coercions'' (specialized data structures representing the path between source and target types).
 
-An alternative to this approach is Abstracting Gradual Typing (AGT).
+An alternative to this approach is Abstracting Gradual Typing (AGT) \ref{10.1145/2914770.2837670}.
 AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
 This model uses evidence; a runtime value that serves as justification for plausibility of a consistent typing judgment, to check for types.
 
 The GrEv compiler represents the first attempt to build a high-performance compiler based on evidence.
-The compiler has different semantic modes that change the way the language interacts with evidence.
-This modes are GrEv/G (proxy, supports ``normal'' gradual typing semantics), GrEv/MC (monotonic closures) and GrEv/MV (monotonic values).
+The compiler has different semantic configurations that change the way the language interacts with evidence.
 Preliminary evaluations indicate that GrEv is not only competitive with Grift but outperforms it in specific scenarios.
 Also, results show that GrEv is more stable across configurations on the static-to-dynamic spectrum.
+
 Despite its great results, there still is a lot of room for improvement, and the question about wether this results are because go the simplistic of the scenario or for other reasons arrises.
 
 This thesis proposal aims to advance the state of the art of evidence-based gradual typing by exploring and implementing optimizations on memory representation of evidence on GrEv.
@@ -79,7 +63,7 @@ For example, consider a function that is passed from a typed module to an untype
 In a naive implementation, each boundary crossing adds a new wrapper to the function, wasting a lot of memory.
 Grift mitigates this problem via coercion composition.
 Whenever a new coercion is applied to an already coerted value, the runtime system attempts to compose the new coercion with the existing one.
-If the coercions are inverses (casting \textit{Int} to \textit{?} and then back to \textit{Int}, for example), they cancel each other out, and the wrapper is removed.
+If the coercions are inverses (casting $\mathsf{int}$ to $\?$ and then back to $\mathsf{int}$, for example), they cancel each other out, and the wrapper is removed.
 If they are compatible, they are merged into a canonical form.
 This normalization process ensures that the space overhead of wrappers remains bounded.
 
@@ -88,7 +72,7 @@ In a traditional ``guarded'' approach, a mutable reference is wrapped in a proxy
 This allows different parts of the program to have different, potentially incompatible views of the same heap cell.
 However, this requires every read and write operation to go through the proxy to get to the value.
 
-Grift's monotonic mode (GriftMS) makes it so that every time a reference is cast to a more precise type, the original heap cell is updated.
+Grift's monotonic configuration (GriftMS) makes it so that every time a reference is cast to a more precise type, the original heap cell is updated.
 If the cell contains a structure, it is recursively traversed to ensure all reachable values conform to the new type.
 
 \subsection{GrEv: Evidence-based Compilation}
@@ -97,32 +81,32 @@ GrEv represents a paradigm shift, implementing the runtime semantics of AGT dire
 Instead of translating types into coercions, GrEv preserves the structure of gradual types at runtime in the form of evidence.
 To better understand what evidence is, we first need to introduce some concepts:
 
-% \begin{figure}[t]
-%   \begin{displaymath}
-%     \begin{array}{r@{\hspace{0.3em}}c@{\hspace{0.8em}}l@{\hspace{0.8em}}l}
-%       e & ::= & \fun{\overline{x: \cT}}{e} \mid e~e\ldots \mid x  & \text{(functions and variables)} \\
-%       & &  \mid n \mid f \mid \binop{e}{e} \mid \mathit{op}~e\ldots & \text{(integers, floats, and operators)} \\
-%       & &  \mid b \mid \ifthenelse{e}{e}{e}  & \text{(booleans and conditionals)} \\
-%       & &  \mid \loopit{x}{e}{e}{e} & \text{(loops)}\\
-%       & &  \mid\letin{x: \cT}{e}{e} \mid \letrecin{f: \cT}{e}{e} & \text{(let bindings)} \\
-%       & &  \mid\boxit{e} \mid \unbox{e} \mid \assign{e}{e} & \text{(references, unit)}\\
-%       &  &   \mid\vector{e}{e} \mid \vectorset{e}{e}{e} \mid \vectorget{e}{e}& \text{(vectors)} \\
-%       &  &  \mid\tuple{\overline{e}} \mid \proj{e}{e} & \text{(tuples)} \\
-%       & &  \mid \datastruct{N} \mid C~e\ldots  & \text{(variant definition and construction)} \\
-%       & &  \mid \match{e} & \text{(variant elimination)} \\
-%       & & \mid e :: \cT \mid e ; e& \text{(ascriptions and sequences)} \\
-%       \cT & ::= & \tint \mid \tbool \mid \tfloat \mid \tref{\cT} \mid \tvec{\cT} 
-%       & \text{(types)} \\ 
-%       %\ttuple{\overline{\cT}}
-%       & & \mid \tunit \mid \cT * \cT \ldots \mid \tfun{(\overline{\cT})}{\cT} \mid N \mid \tunk  &  
-%     \end{array}
-%   \end{displaymath}
-%   \caption{\lang source syntax}
-%   % \mt{what is the second argument of vector? Are recursive types missing?}
-%   %\et{box/unbox/setbox or ml-style !, :=, ref}\et{finalize keywords and update lstlisting}
-%   % \et{fix syntax operators, list them}\et{what about unit?}}
-%   \label{fig:lang-syntax}
-% \end{figure} 
+\begin{figure}[t]
+  \begin{displaymath}
+    \begin{array}{r@{\hspace{0.3em}}c@{\hspace{0.8em}}l@{\hspace{0.8em}}l}
+      e & ::= & \fun{\overline{x: \cT}}{e} \mid e~e\ldots \mid x  & \text{(functions and variables)} \\
+      & &  \mid n \mid f \mid \binop{e}{e} \mid \mathit{op}~e\ldots & \text{(integers, floats, and operators)} \\
+      & &  \mid b \mid \ifthenelse{e}{e}{e}  & \text{(booleans and conditionals)} \\
+      & &  \mid \loopit{x}{e}{e}{e} & \text{(loops)}\\
+      & &  \mid\letin{x: \cT}{e}{e} \mid \letrecin{f: \cT}{e}{e} & \text{(let bindings)} \\
+      & &  \mid\boxit{e} \mid \unbox{e} \mid \assign{e}{e} & \text{(references, unit)}\\
+      &  &   \mid\vector{e}{e} \mid \vectorset{e}{e}{e} \mid \vectorget{e}{e}& \text{(vectors)} \\
+      &  &  \mid\tuple{\overline{e}} \mid \proj{e}{e} & \text{(tuples)} \\
+      & &  \mid \datastruct{N} \mid C~e\ldots  & \text{(variant definition and construction)} \\
+      & &  \mid \match{e} & \text{(variant elimination)} \\
+      & & \mid e :: \cT \mid e ; e& \text{(ascriptions and sequences)} \\
+      \cT & ::= & \tint \mid \tbool \mid \tfloat \mid \tref{\cT} \mid \tvec{\cT} 
+      & \text{(types)} \\ 
+      %\ttuple{\overline{\cT}}
+      & & \mid \tunit \mid \cT * \cT \ldots \mid \tfun{(\overline{\cT})}{\cT} \mid N \mid \tunk  &  
+    \end{array}
+  \end{displaymath}
+  \caption{\lang source syntax}
+  % \mt{what is the second argument of vector? Are recursive types missing?}
+  %\et{box/unbox/setbox or ml-style !, :=, ref}\et{finalize keywords and update lstlisting}
+  % \et{fix syntax operators, list them}\et{what about unit?}}
+  \label{fig:lang-syntax}
+\end{figure} 
 
 \subsubsection{Concretization and Abstraction}
 
@@ -134,23 +118,23 @@ For precise types (like int or bool), the mapping is singular:
 
 $$\gamma(int) = \{int\}$$
 
-and, as we said before, the unknown type $?$ concretizes to the set of all possible static types in the language:
+and, as we said before, the unknown type $\?$ concretizes to the set of all possible static types in the language:
 
-$$\gamma(?) = TYPE$$
+$$\gamma(\?) = TYPE$$
 
 Structural types propagate this relation. A gradual function type $G_1 \rightarrow G_2$ concretizes to the set of all static function types $T_1 \rightarrow T_2$ where $T_1$ is in the concretization of $G_1$ and $T_2$ is in the concretization of $G_2$.
 
 With this definition we can think about \textbf{precision}.
-A gradual type $G_1$ is less precise than $G_2$ if the set of static types represented by $G_1$ (i.e. its concretization) is a superset of those represented by $G_2$.
+A gradual type $G_1$ is more precise than $G_2$ if the set of static types represented by $G_1$ (i.e. its concretization) is a subset of those represented by $G_2$.
 
 The abstraction function ($\alpha$) maps a set of static types to the more precise gradual type that represents the set.
 For example:
 
-$$\alpha(\{int, bool\}) = ?$$
+$$\alpha(\{int, bool\}) = \?$$
 
 or
 
-$$\alpha(\{int \rightarrow bool, int \rightarrow string\}) = int \rightarrow ?$$
+$$\alpha(\{int \rightarrow bool, int \rightarrow string\}) = int \rightarrow \?$$
 
 \subsubsection{Consistency}
 
@@ -161,20 +145,20 @@ In a general manner, the lifting of a relation $R$ is denoted by:
 
 $$\tilde{R}(G_1, G_2) = \exists T_1 \in \gamma(G_1), T_2 \in \gamma(G_2), R(T_1, T_2)$$
 
-which in simple words means that $\tilde{R}$ of two gradual types $G_1$ and $G_2$ holds if there exist two static types $T_1$ and $T_2$ in the sets that each gradual type represents where $R(T_1, T_2)$ holds.
+which in simple words means that $\tilde{R}$ of two gradual types $G_1$ and $G_2$ holds if there exist two static types $T_1$ and $T_2$ in the sets each gradual type represents where $R(T_1, T_2)$ holds.
 
 In the case of GrEv, the only relation defined is equality, and its gradual counterpart is called consistency (denoted by $\sim$).
-We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$ (or in other words, if there exist two static types in each concretization that fulfill the relation i.e. are equal).
+We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$ (or in other words, if there exist two static types in each concretization that fulfill the equality relation).
 
 $$G_1 \sim G_2 \Leftrightarrow \gamma (G_1) \cap \gamma (G_2) \ne \emptyset$$
 
-This explains why $int$ is consistent with $?$ ($int$ is in the set of all types), but not consistent with $bool$.
+This explains why $int$ is consistent with $\?$ ($int$ is in the set of all types), but not consistent with $bool$.
 A very important detail is that, different from equality, \textbf{consistency is not transitive}.
 If it were, we could have something like the following:
 
-$$int\sim ? \land ? \sim bool \Rightarrow int \sim bool$$
+$$int\sim \? \land \? \sim bool \Rightarrow int \sim bool$$
 
-which breaks everything.
+which breaks the static rules.
 
 \subsubsection{Evidence and Consistent Transitivity}
 
@@ -183,35 +167,38 @@ AGT provides a direct dynamic semantics of gradual programs by applying proof re
 While in a fully static language equality between types is transitive, in a gradual setting we can not statically make sure that the transitivity of consistency between types holds.
 Lets introduce the following program:
 
-\begin{lstlisting}[language=Lambda]
+\begin{lstlisting}
 let f: int -> int = fun x -> x + x in 
   f (true :: ?)
 \end{lstlisting}
 
-In this example, the function \textbf{\textit{f}} expects an \textit{int} and a value of type \textit{?} is given.
-This program type checks because $? \sim int$, but in runtime, as the argument of the function given is a \textit{bool}, we have a chain:
+In this example, the function $\mathsf{f}$ expects an $\mathsf{int}$ and a value of type $\?$ is given.
+This program type checks because $\? \sim int$, but in runtime, as the argument of the function given is a $\mathsf{bool}$, we have a chain:
 
-$$bool \sim ? \land ? \sim int$$
+$$bool \sim \? \land \? \sim int$$
 
-So dynamically something must be done to justify this judgement.
+The way to try to justify this judgment is through the use of evidence.
 
-Evidence is a runtime object that carries information about the type of some judgement, and has its own types $ETYPE$.
+Evidence is a runtime object that carries information about the type of some judgement.
+This construction has its own types $ETYPE$.
 
-To illustrate a more general case, lets introduce a gradual language where static types are natural numbers, and the only relation between them is the ``less than'' comparison ($\leq$)
+To illustrate a more general case, lets introduce a gradual language where static types are natural numbers, and the only relation between them is the ``less than'' comparison ($\leq$).
 
 Imagine now that we have the following judgement:
 
-$$ 5 \tilde\leq ? $$
+$$ 5 \tilde\leq \? $$
 
 In order to justify this judgement, we must provide evidence that show us why this holds.
-Using the definition of gradual types that represent a set of static types, this judgement holds because $\gamma(?)$ contains various numbers that are greater or equal than 1 (in other words, there exist at least one type that suffies the lifting of the $\tilde\leq$ relation)
-Actually, we could use $ETYPE = GTYPE$ to justify this judgement, because there exist a type in $GTYPE$ whose concretization contains all the values that suffies the relation, that is, $\gamma(?)$, but this is not precise enough.
-That's why it's prefered in this case to use intervals as $ETYPE$, so in the case of the previos judgement, we can use the interval $[5, \infty]$.
+Using the definition of gradual types given before, this judgement holds because $\gamma(\?)$ contains various numbers that are greater or equal than 1 (in other words, there exist at least one type that suffies the lifting of the $\tilde\leq$ relation).
+
+Actually, we could use $ETYPE = GTYPE$ to justify this judgement, because there exist a type in $GTYPE$ whose concretization is a superset of the set that contains all the values that suffies the relation, that is, $\gamma(\?)$, but this may not be preferable in some cases.
+That's why, in this case, it's prefered to use intervals as $ETYPE$.
+This way, the evidence of the previous judgement can be represented as the interval $[5, \infty]$.
 
 Evidence for this judgement would look like this:
-$$\langle[5, 5], [5, \infty]\rangle \vdash 5 \tilde\leq ?$$
+$$\langle[5, 5], [5, \infty]\rangle |- 5 \tilde\leq \?$$
 
-Note that, for the type \textit{5} we use the interval $[5, 5]$, because evidence must be expressed with $ETYPE$
+Note that, for the type $\mathsf{5}$ we use the interval $[5, 5]$, because evidence must be expressed with an $ETYPE$.
 
 We define the interior of a judgement between two gradual types $G_1$ and $G_2$ with the relation $R$ ($I_R(G_1, G_2)$) like the following:
 
@@ -219,28 +206,31 @@ $$I_R(G_1, G_2) = \alpha^{2}_E(\{\langle T_1, T_2 \rangle \mid T_1 \in \gamma(G_
 
 This is the initial evidence of a judgement, and can be understood in two steps:
 \begin{enumerate}
-  \item First we calculate the two set of static type pairs $T_1$ and $T_2$ where the relation $R$ holds.
-  \item Then, we calculate the abstraction from the TYPE set into the ETYPE set ($\alpha^{2}_E$)\footnote{$\alpha^2(\{\langle T_{i1}, T_{i2} \rangle, ...\}) = \langle \alpha(\{T_{i1}, ...\}), \alpha(\{T_{i2}, ...\}) \rangle$} to get the evidence type $E$ that better represents this two TYPE sets.
+  \item First we calculate the two sets of static type pairs $T_1$ and $T_2$ where the relation $R$ holds.
+  \item Then, we calculate the abstraction from the TYPE set into the ETYPE set ($\alpha^{2}_E$)\footnote{$\alpha^2(\{\langle T_{i1}, T_{i2} \rangle, ...\}) = \langle \alpha(\{T_{i1}, ...\}), \alpha(\{T_{i2}, ...\}) \rangle$} to get the evidence types $E_1$ and $E_2$ that better represents this two TYPE sets.
 \end{enumerate}
 
 Note that we are using an abstraction function between TYPE and ETYPE.
 In order to do this, a Galois connection between TYPE and ETYPE must be defined, including the abstraction and concretization functions.
-This functions follow the same definition given in the previously.
+This functions follow the same definition given previously.
 
-Now we would like to define how to check whether the relation $R$ applies to two gradual types $G_1$ and $G_3$ applies, given that the relation applies between $G_1$ and $G_2$, and also between $G_2$ and $G_3$: 
+Now we would like to define how to check whether the relation $R$ holds for two gradual types $G_1$ and $G_3$, given that the relation holds between $G_1$ and $G_2$, and also between $G_2$ and $G_3$: 
 
-$$\epsilon_1 \vdash \tilde{R}(G_1, G_2) \land \epsilon_2 \vdash \tilde{R}(G_2, G_3) \Rightarrow \tilde{R}(G_1, G_2)$$
+$$\epsilon_1 |- \tilde{R}(G_1, G_2) \land \epsilon_2 |- \tilde{R}(G_2, G_3) \Rightarrow \tilde{R}(G_1, G_2)$$
 
-For this, we need to check inside the evidences $\epsilon_1$ and $epsilon_2$, and see if there exists a subset of TYPEs in the intersection between the concretization of each part of the innermost part of this evidences, where the relation $R$ holds.
+For this, we need to check inside the evidences $\epsilon_1$ and $\epsilon_2$ and find a subset of $P(TYPE)$ in the intersection between the concretization of each part of the innermost part of this evidences, where the relation $R$ holds.
 This operation is called \textit{Consistent Transitivity}, its denoted by $\circ^{R}$ and serves the functionality of checking whether a relation between two gradual types holds by evaluating transitivity.
 
-$$\epsilon_1 \circ^{R} \epsilon_2 = \langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle = \alpha(\{\langle T_1, T_4 \rangle \mid T_1 \in \gamma_E(E_1), T_4 \in \gamma_E(E_4), T_{2\cap 3} \in \gamma_E(E_2) \cap \gamma_E(E_3), R(T_1, T_{2\cap 3}) \land R(T_{2\cap 3}, T_4)\})$$
+\begin{mathpar}
+  \epsilon_1 \circ^{R} \epsilon_2 = \langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle = \\
+  \alpha(\{\langle T_1, T_4 \rangle \mid T_1 \in \gamma_E(E_1), T_4 \in \gamma_E(E_4), T_{2\cap 3} \in \gamma_E(E_2) \cap \gamma_E(E_3), R(T_1, T_{2\cap 3}) \land R(T_{2\cap 3}, T_4)\})
+\end{mathpar}
 
-This operation can be understood in N steps:
+This operation can be understood in 4 steps:
 
 \begin{enumerate}
   \item First, we calculate the concretization $\gamma_E$ of every evidence type $E_i$ to get the set of static types $T_i$ that are represented by $E_i$.
-  \item Then, to justify transitivity we have to check if there exist a pair of TYPEs in the intersection of the innermost parts of the evidences we are checking\footnote{if $\langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle$, the inner part would be $E_2$ and $E_3$} that suffies the relation $R$.
+  \item Then, to justify transitivity we must check if there exist a pair of TYPEs in the intersection of the innermost parts of the evidences we are checking\footnote{if $\langle E_1, E_2 \rangle \circ^{R} \langle E_1, E_2 \rangle$, the inner part would be $E_2$ and $E_3$} that suffies the relation $R$.
   \item If such pair exists, then the transitivity is justified and the evidence is updated with the outtermost parts of the evidences.
   \item If such pair does not exist, then the transitivity is not justified, and the dynamic system should throw an error.
 \end{enumerate}
@@ -248,125 +238,159 @@ This operation can be understood in N steps:
 Lets ilustrate this two operations with an example.
 We want to check consistent transitivity between the two following judgements:
 
-\begin{math}
-  10\tilde\leq ? \\
-  ?\tilde\leq 20
-\end{math}
+\begin{mathpar}
+  10\tilde\leq \? \\
+  \?\tilde\leq 20
+\end{mathpar}
 
-In order to check if $10 \tilde\leq 20$, we can use the $I_{\tilde\leq}$ and $\circ^{\tilde\leq}$.
+In order to check if $10 \tilde\leq 20$, we can use the $I_{\tilde\leq}$ and $\circ^{\tilde\leq}$ operations.
 First, for notation sake, a set of numbers from $a$ to $b$ will be represented as $S_{[a, b]}$.
 Now, to calculate the interior, we calculate first the concretization of the gradual types:
 
-\begin{math}
+\begin{mathpar}
   \gamma(10) = \{10\} \\
   \gamma(20) = \{20\} \\
-  \gamma(?) = Nat
-\end{math}
+  \gamma(\?) = Nat
+\end{mathpar}
 
 
 With these, we can calculate the interior of the first judgement to get its initial evidence:
 
-\begin{math}
-  I_{\tilde\leq}(10, ?) = \alpha^{2}_{E}(\{\langle T_1, T_2\rangle \mid T_1 \in \{10\}, T_2 \in Nat, T_1 \leq T_2\}) \\
+\begin{mathpar}
+  I_{\tilde\leq}(10, \?) = \alpha^{2}_{E}(\{\langle T_1, T_2\rangle \mid T_1 \in \{10\}, T_2 \in Nat, T_1 \leq T_2\}) \\
   = \langle \alpha(\{10\}), \alpha(S_{[10, \infty]}) \rangle = \langle [10, 10], [10, \infty] \rangle
-\end{math}
+\end{mathpar}
 
 The same way, we can calculate the interior of the second judgement and get the following:
 
-\begin{math}
-  \langle [10, 10], [10, \infty] \rangle \vdash 10\tilde\leq ? \\
-  \langle [1, 20], [20, 20] \rangle \vdash ?\tilde\leq 20
-\end{math}
+\begin{mathpar}
+  \langle [10, 10], [10, \infty] \rangle |- 10\tilde\leq \? \\
+  \langle [1, 20], [20, 20] \rangle |- \?\tilde\leq 20
+\end{mathpar}
 
-Now, in order to check if the judgement, we have to calculate the consistent transitivity over the two evidences.
+Now, in order to check if the judgement is justified, we have to calculate the consistent transitivity over the two evidences.
 The concretization of the evidences $\gamma_E$ is
 
-\begin{math}
+\begin{mathpar}
   \gamma_E([10, 10]) = \{10\} \\
   \gamma_E([10, \infty]) = S_{[10, \infty]} \\
   \gamma_E([1, 20]) = \{1, 2, ..., 20\} \\
   \gamma_E([20, 20]) = \{20\}
-\end{math}
+\end{mathpar}
 
 and with that, the consistent transitivity of the evidences is:
 
-\begin{math}
+\begin{mathpar}
   \langle [10, 10], [10, \infty] \rangle \circ^{\tilde\leq} \langle [1, 20], [20, 20] \rangle \\
   = \alpha(\{\langle T_1, T_4\rangle \mid T_1 = 10, T_4 = 20, T_{2\cap 3} \in \{10, 11, ..., 20\}, 10 \leq T_{2\cap 3} \land T_{2\cap 3} \leq 20\}) \\
   \alpha(\langle 10, 20 \rangle) = \langle [10, 10], [20, 20] \rangle
-\end{math}
+\end{mathpar}
 
-Finally, because we could calculate the consistent transitivity, the judgement $10 \tilde\leq 20$ holds:
+Finally, as the consistent transitivity could be calculated, the judgement $10 \tilde\leq 20$ holds:
 
-$$\langle [10, 10], [20, 20] \rangle \vdash 10 \tilde\leq 20$$
-
+$$\langle [10, 10], [20, 20] \rangle |- 10 \tilde\leq 20$$
 
 
 When more complex types and relations are available (like subtyping, for example), evidence needs to be able to store the information about the types involved and the relations between them.
-GrEv only has simple types, so evidence can be represented as a single type.
 
-
-
-
-
-% We have a function \textit{double} with type $?$ that expects its parameter to be an $int$ (we know that because its definition has the $+$ operator, that is only valid with $int$), but we call it with the value \textit{true} of type $bool$.
-% We know statically that $bool \sim ?$ and $? \sim int$, but in this case the transitivity is not valid because \textit{bool} is not consistent with \textit{int}.
+% We have a function \textit{double} with type $\?$ that expects its parameter to be an $int$ (we know that because its definition has the $+$ operator, that is only valid with $int$), but we call it with the value $\mathsf{true}$ of type $bool$.
+% We know statically that $bool \sim \?$ and $\? \sim int$, but in this case the transitivity is not valid because $\mathsf{bool}$ is not consistent with $\mathsf{int}$.
 %
 % To solve this problem, AGT proposes the use of \textit{evidence} to make sure that the transitivity between this consistenty judgements holds.
 % Evidence is a runtime object that justifies a specific consistency judgement. 
 % As a value flows from a context to another (like in the example), evidence is checked to see if the types are compatible, and combined into a more precise state.
 % This operation is called \textit{Consistent Transitivity}.
 
-\subsubsection{GrEv's evidence implementation}
+\subsection{GrEv's evidence implementation}
 
 % Apart from GrEv's gradual modes, GrEv also has it's static and dynamic versions (StaticGrEv and DynGrEv, respectively).
 % This versions follow the basic principles of compilation for statically and dynamically typed languages.
-As mentioned before, the current implementation of GrEv only supports simple types, so evidence can be represented as a simple type.
-GrEv differentiate between inmmediate and boxed values.
-Boxed values have an specific field in memory that saves its evidence.
-For example, a reference is stored as two words (16 bytes), one as the evidence and the other as the value.
-Inmmediate values are tagged, so there is no need to have extra memory to get it's evidence.
 
-\subsection{GrEv modes}
+The current implementation of GrEv only supports simple types, and the only relation between them is consistency.
+This makes GrEv's evidence suitable to a representation simplification. 
+Different from the relation used in the previous example, consistency with simple types is symmetrical, which makes evidence able to be represented as a single gradual type (in this case, $ETYPE = GTYPE$).
+With this simplification, consistent transitivity becomes the presicion meet between both types: $$\langle G_1 \rangle \circ \langle G_2 \rangle = \langle G_1 \sqcap G_2 \rangle$$
 
-As stated in the introduction, GrEv supports different semantic modes that interacts with evidence in different ways.
-To ilustrate the semantic each of the modes supports, let's introduce the following program:
+Since, in order to justify judgements, values must carry an evidence, every value in GrEv is an \textit{evidence value}, $\epsilon v$.
+Also, values are differentiated by wether they are stored in the heap (boxed) or are immediate.
+Immediate values (integers and booleans) are tagged, and because of the simplification, there is no need to have extra memory to get it's evidence (the tag is sufficient).
+Boxed values (as shown in Table~\ref{tab:values}) have an specific field in memory that saves its evidence alongside their respective information.
+For boxed values, evidence can be stored as a number or a pointer to a structure that contains a larger evidence.
+For example, the evidence of an array can not be stored in 64 bits, so its evidence is stored as an array of evidences.
+Depending on the configuration (as shown in Table \ref{tab:values}), values will be stored adyacent to their evidence (monotonic configurations), or in a proxy that contains evidence and a pointer to the values (guarded configurations).
 
-\begin{lstlisting}[language=Lambda]
-let double: ? = fun x -> x + x in 
-  foo 1;
-  foo 1.0
-\end{lstlisting}
+\subsection{GrEv configurations}
 
-\subsubsection{GrEv/MC: Monotonic closures}
+\begin{table}[t]
+\centering
+\begin{footnotesize}
+\begin{tabular}{@{}lll@{}}
+\toprule
+\textbf{Value} & \textbf{Monotonic} & \textbf{Guarded} \\
+upon more precise
+ascription: & update ev in place & shallow copy with new ev \\
+\midrule
+ref & \boxedtwo{ev}{val} & \boxedtwo{ev}{val\_ptr} \\[0.3em]
+vector & \boxedthree{ev}{len}{vals...}  & \boxedthree{ev}{len}{vals\_ptr} \\[0.3em]
+tuple & \boxedtwo{ev}{vals...} & \boxedtwo{ev}{vals\_ptr} \\[0.3em] 
+variant & \boxedthree{ev}{ctr\_id}{vals...} & \boxedthree{ev}{ctr\_id}{vals...} \\[0.3em]
+closure & \boxedthree{ev}{fun\_ptr}{vals...} & \boxedthree{ev}{fun\_ptr}{vals\_ptr} \\[0.3em]
+\bottomrule
+\end{tabular}
+\end{footnotesize}
+\caption{Representation of boxed evidence values in memory, in monotonic and guarded semantics. 
+% \et{not uniform:} The length of vectors is materialized (despite being present in the associated evidence) for efficiency \mt{vectors types do not carry length}.
+% \et{tuples have len in the implementation??}\mt{not needed, same for closures, as this can be obtained from evidence}\et{variants: same impl for both semantics??}
+% \et{ev is a pointer too in this version}
+%`fun\_ptr' is the function label (code pointer).
+}
+\label{tab:values}
+\end{table}
 
-GrEv/MC implements monotonic closures, this is, the evidence for a closure is global.
-This means that, when the evidence of the closure is updated, this affects every other application of the function.
-In the example, when \textit{foo} is applied to 1, its evidence is updated from \textit{?} to $int \rightarrow int$, thus its following application throws an error.
+GrEv supports different semantic configurations that interacts with evidence in different ways.
+To ilustrate the semantic each of the configurations supports, let's analyse the program in Figure~\ref{fig:mono-vs-guarded} that uses references (closures and tuples follow the same logic):
 
+\subsubsection{Guarded configurations: GrEv/G}
 
-\subsubsection{GrEv/G: Guarded}
+Guarded configurations use proxys to store evidences separated from their values.
+In this case, when $y$ is created, a new proxy containing its evidence is allocated, and no combination of evidence is performed.
+In this case, the program succesfully runs producing the final result $true$.
+Figure \ref{fig:mono-vs-guarded} shows this case on the right-hand side.
 
-GrEv/G uses proxys to store values in the heap separated from their evidence.
-In this version, every time  the value of an evidence is updated, a shallow copy is created with a new memory cell that contains this update.
-In this case, after the first application of \textit{foo}, a new memory cell is created that contains the evidence $int \rightarrow int$, so the second application throws no error.
+\subsubsection{Monotonic Configurations: GrEv/MC and GrEv/MV}
 
-\subsubsection{GrEv/MV: Monotonic values}
+Monotonic configurations use ``global'' evidence for values.
+In this version, when the reference bound to $x$ is created with a value of static type $\?$, its associated evidence in the heap is $\langle ref[int]\rangle$.
+Then, $y$ is created with static type $ref[bool]$ and value $x$.
+Since both point to the same value, the new evidence of $y$ is combined with the evidence of $x$  stored in the heap, which leads to a runtime error at line 2.
+Figure \ref{fig:mono-vs-guarded} shows this case on the left-hand side.
 
-GrEv/MV uses monotonic evidences for every value in the language.
-In this sense, when the evidence of a reference, a vector, a closure, etc. is updated, it is updated globally and affects the following uses of that value.
+GrEv implements two monotonic configurations; GrEv/MC where closures are monotonic, and GrEv/MV where all values are monotonic.
 
-\section{Problem}
-
-In order to initialize and update the different evidences in a program, the following operations must be implemented:
-\begin{itemize}
-  \item Interior
-  \item Meet
-  \item Cod
-  \item Dom
-\end{itemize}
-
-The current representation of evidence is not optimal time and spacewise, specially for data structures and functions.
+\begin{figure}[t]
+  \hspace{1em}
+\begin{minipage}[c]{0.26\linewidth}
+\begin{lstlisting}[basicstyle=\ttfamily\footnotesize]
+let x = ref (4 :: ?) in
+let y: ref[bool] = x in
+y := true; 
+!y
+\end{lstlisting} 
+    
+% \begin{lstlisting}
+%   let x = ref (4 :: ?) in
+%   let y = x in
+%   y := (true :: ?);
+%   !y
+% \end{lstlisting}
+  \end{minipage}
+  \hfill
+  \begin{minipage}[c]{0.68\linewidth}
+    \includegraphics[width=\linewidth]{figures/monotonic_vs_guarded.pdf}
+  \end{minipage}
+\caption{Monotonic vs. Guarded References}
+\label{fig:mono-vs-guarded}
+\end{figure}
 
 \section{Research questions}
 
@@ -374,24 +398,25 @@ The research questions regarding this thesis are the following:
 
 \begin{itemize}
   \item Do the proposed optimization on evidence memory representation help to reduce the overhead of the current implementation of GrEv?
-  \item How much does the current implementation of evidence in GrEv's differents gradual modes affect on its overhead over StaticGrEv?
+  \item How much does the current implementation of evidence in GrEv's differents gradual configurations affect on its overhead over different baselines, like StaticGrEv, StaticGrift and Racket?
   \item How much can an optimization on GrEv's Evidence memory representation improve its performance?
+  \item Is it possible to translate the optimizations made in the GrEv's simplified version of evidence into a more general version of evidence?
 \end{itemize}
 
 \section{Hypothesis}
 
-The current implementation of GrEv's evidence affects significantly on its overhead over StaticGrEv, and its possible to reduce it by using a more clever implementation that is optimized for the operations needed.
+The current implementation of GrEv's evidence affects significantly on its overhead, and its possible to reduce it by using a more clever implementation that is optimized for the operations needed. 
 
 \section{Main Objective}
 
-The main objective of this proposal is to optimize GrEv's evidence current memory representation using a more suitable data structure, that is more efficient on evidence specific operations: meet, cod, dom, interior and equality.
+The main objective of this proposal is to optimize GrEv's evidence current memory representation using a more suitable data structure, that is more efficient, space and timewise, on evidence specific operations: meet, cod, dom, interior and equality.
 
 \section{Specific Goals}
 
 The specific goals of this research proposal are the following:
 
 \begin{itemize}
-  \item Find data structures that better suit the need of GrEv's evidence.
+  \item Find data structures that better suit the needs of GrEv's evidence.
   \item Implement a standarized benchmark suite (like GTP) to get better insight on GrEv's current state and the different evidence representations performances.
   \item Measure different implementations to get better insight on what operations have more overhead in specific cases.
 \end{itemize}
@@ -404,7 +429,6 @@ To acomplish such goals, the following steps will be followed:
 
 \begin{itemize}
   \item \textbf{State of the art in-depth review.} An in-depth review of the state of the art on gradual typing implementations will be conducted. The main goal of this stage is to clarify concepts and understand optimizations made in other implementations.
-  \item \textbf{}
 \end{itemize}
 
 \subsection{GrEv's Modularization and Expansion}
@@ -424,26 +448,16 @@ To acomplish such goals, the following steps will be followed:
 
 \section{Contributions}
 
-\section{Conclusion}
+This thesis aims to advance the state of the art in high-performance gradual typing compilation through the following contributions:
 
-% \section{Main Goal}
-%
-%
-% \section{Specific goals}
-%
-% \begin{itemize}
-% \item goal 1
-% \end{itemize}
-%
-% \section{Methodology}
-%
-% texto
-%
-% \section{Expected results}
-%
-%  y contribuciones
+\begin{enumerate}
+  \item \textbf{Design of optimized evidence representations:} The optimizations on GrEv's evidence memory representation will help on measuring the impact it has over the performance of the compiler, and more specifically, which parts act as a bottleneck.
+  \item \textbf{Performance evaluation via GTP:} The standarization of GrEv's benchmarks suite will give better insight on the performance og the compiler on its current state, and also on any changes, extensions or experiments made in the future.
+\end{enumerate}
+
+
 
 \nocite{*}
-\bibliographystyle{eptcs}
+\bibliographystyle{acmmart}
 \bibliography{bibliography}
 \end{document}
