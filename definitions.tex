@@ -1,0 +1,286 @@
+
+\usepackage[utf8]{inputenc}
+\usepackage{anyfontsize} % kill warnings about font sizes 
+% \usepackage{amsmath}     % Mathematics FTW!
+% \usepackage{amssymb}     % needed for \mathbb and mathcal
+\usepackage{semantic}    % for PLT
+\usepackage{stmaryrd}   % provides some PLy symbols, like Scott Brackets
+\usepackage{mathpartir}  % for \mathpar
+\usepackage{braket}      % for \set and \braket
+\usepackage{thmtools}    % to duplicate theorems in the appendix
+\usepackage{xspace}
+\usepackage{proof}
+\usepackage{myyhmath}
+\usepackage{rotating}
+\usepackage{tikz}
+\usepackage{changepage}
+\usepackage{listings}
+\usepackage{mdframed}
+\usepackage{mathtools}
+\usepackage{ dsfont }
+\usepackage[toc,page]{appendix}
+\usepackage{pifont}
+\usepackage[outline]{contour}
+\usepackage{makecell}
+\usepackage{stackengine,graphicx}
+\usepackage{multicol}
+% \usepackage[skip=0pt]{caption}
+\usepackage{stackrel}
+\usepackage{extarrows}
+\usepackage{tabularx}
+\usepackage{utfsym}
+\usepackage{mdframed} % 用于添加边框
+\usepackage[capitalise]{cleveref}
+\usepackage{xcolor}
+\usepackage{tikz}
+\usetikzlibrary{matrix,positioning,arrows.meta}
+
+\newcommand\xxoverset[3]{%
+  \resizebox{#1+\widthof{\scriptsize #2}}{\height}{$#3$}}
+\newcommand\extoverset[3][0pt]{%
+  \mathrel{\overset{\textup{#2}}{\xxoverset{#1}{#2}{#3}}}}
+
+\usetikzlibrary{shapes.geometric, arrows}
+
+\tikzstyle{mynode} = [rectangle split, rectangle split parts=2, rounded corners, minimum width=3cm, minimum height=1cm,text centered, draw=black]
+\tikzstyle{myarrow} = [->, >=stealth, double]
+\tikzstyle{mytriangle} = [diamond, text centered, minimum width=3cm, minimum height=1.3cm, draw]
+
+
+%%%%%%%%%%%%% Cleveref 
+\crefname{section}{\textsection\!}{\textsection\!}
+\crefname{figure}{Fig.}{Figs.}      % lowercsase: \cref
+\Crefname{figure}{Figure}{Figures}  % uppercase: \Cref
+
+%%%%%%%%%%%%%%%FOR GRAPH IMAGES
+%\usepackage{tikz}
+\usetikzlibrary{automata, graphs,positioning,chains,arrows,decorations.pathmorphing}
+
+
+\usetikzlibrary{arrows,positioning,backgrounds} 
+
+
+
+%\def\checkmark{\tikz\fill[scale=0.4](0,.35) -- (.25,0) -- (1,.7) -- (.25,.15) -- cycle;}
+
+%%%%%%%%%%%%%%%
+
+
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+\newcommand{\lang}{\textsf{GTLC+}\xspace}%
+
+\newcommand{\ie}{\emph{i.e.}\xspace}
+\newcommand{\etal}{\emph{et al.}\xspace}
+\newcommand{\eg}{\emph{e.g.}\xspace}
+\newcommand{\resp}{\emph{resp.,}\xspace}
+
+\usepackage{tabularx}
+
+\declaretheorem[style=remark,numbered=no]{case}
+\declaretheorem[style=remark,numbered=no]{notation}
+
+\newtheorem{statement}{Statement}
+
+
+% Comment form:  requires amssymb and color
+\definecolor{violeta}{HTML}{9000FF}
+\definecolor{propcolor}{HTML}{3F7D31}
+\definecolor{etcolor}{HTML}{ED720E}
+
+\newcommand{\node}[1]{\llparenthesis#1\rrparenthesis}
+\newcommand{\mynote}[3]
+   {{\color{#3} \fbox{\bfseries\sffamily\scriptsize#1}
+   {\small$\blacktriangleright$\textsf{\emph{#2}}$\blacktriangleleft$}}~}
+% \renewcommand{\mynote}[3]{}
+\newcommand{\unsure}[1]{\textcolor{red}{#1}}
+
+\definecolor{mynotecolor}{HTML}{F282B4}
+
+\definecolor{customgreen}{HTML}{006400}
+
+\newcommand{\et}[1]{\mynote{ET}{#1}{blue}}
+\newcommand{\mt}[1]{\mynote{MT}{#1}{red}}
+\newcommand{\jr}[1]{\mynote{JR}{#1}{violeta}}
+
+
+
+
+\newcommand{\notes}[1]{\mynote{Note}{#1}{red}}
+
+\newif\ifdiffmode
+\diffmodefalse
+\newcommand{\changed}[1]{\ifdiffmode\textcolor{blue}{#1}\else#1\fi}
+
+\newenvironment{changedenv}
+  {\begingroup\color{blue}}  % begin code -- Not using flag because there is a weird bug that I don't understand
+  {\endgroup}
+
+\renewenvironment{changedenv}
+  {\begingroup} 
+  {\endgroup}
+
+\newcommand{\evcolor}[1]{{\color{blue} #1}}
+\newcommand{\icolor}[1]{{\color{blue} #1}}
+
+\newcommand{\?}{\textsf{\upshape ?}}
+\newcommand{\consistent}[1]{\widetilde{#1}}
+\newcommand{\collecting}[1]{\wideparen{#1}}
+\newcommand{\cT}{G} %gradual type
+\newcommand{\cE}{E} %gradual evidence type
+\newcommand{\clT}{\collecting{T}}% collecting type
+\newcommand{\ct}{\consistent{t}} %gradual term
+\newcommand{\gvl}{\consistent{v}} %gradual value
+
+% \newcommand{\Type}{\mathsf{Type}}
+\newcommand{\Int}{\mathsf{Int}}
+\newcommand{\String}{\mathsf{String}}
+\newcommand{\Float}{\mathsf{Float}}
+\newcommand{\Bool}{\mathsf{Bool}}
+\newcommand{\ev}[1][]{\evcolor{\varepsilon_{#1}}}
+\newcommand{\pr}[1]{\evcolor{\braket{{#1}}}}
+\newcommand{\interior}[1]{\mathcal{I}_{#1}}
+\newcommand{\meet}{\sqcap}
+\newcommand{\false}{\mathsf{false}}
+
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\E}{\mathcal{E}}
+\newcommand{\emptyenv}{\ensuremath{\o}\xspace}
+\newcommand{\trans}[1]{\mathbin{\evcolor{\circ^{#1}}}}
+\newcommand{\red}{\longmapsto}
+\newcommand{\nred}{~-->~}
+\newcommand{\error}{\textup{\textbf{error}}}
+
+\DeclareDocumentCommand{\itt}{ m O{} }{\icolor{\IfNoValueTF{#2}{t^{{#1}}}{t^{{#1}}_{#2}}}}
+\DeclareDocumentCommand{\ittp}{ m O{} }{\icolor{\IfNoValueTF{#2}{t'^{{#1}}}{t'^{{#1}}_{#2}}}}
+\newcommand{\TermT}[1]{\icolor{\mathds{T}}[#1]}
+\newcommand{\ix}[1][]{\icolor{x^{{#1}}}}
+\newcommand{\VarT}[1]{\mathds{V}[#1]}
+\DeclareDocumentCommand{\itr}{ O{} }{\icolor{\IfNoValueTF{#1}{t}{t_{#1}}}}
+\DeclareDocumentCommand{\itrp}{ O{} }{\icolor{\IfNoValueTF{#1}{t'}{t'_{#1}}}}
+\newcommand{\iapp}[1]{\mathbin{\icolor{@^{#1}}}}
+\newcommand{\braketeq}[2]{\evcolor{\braket{#1}}}
+\newcommand{\iasc}[2]{\icolor{#1 :: #2}}
+
+\newcommand{\relsymbol}{R}
+\DeclareDocumentCommand{\rel}{m m}{\relsymbol(#1,#2)}
+\DeclareDocumentCommand{\crel}{m m}{\widetilde{\relsymbol}(#1,#2)}
+\newcommand{\dom}{\mathit{dom}}
+\newcommand{\cod}{\mathit{cod}}
+
+
+\newcommand{\boxit}[1]{\text{\lstinline{ref}}~{#1}}
+\newcommand{\unbox}[1]{\text{\lstinline{!}}{#1}}
+\newcommand{\assign}[2]{{#1} := {#2}}
+\DeclareDocumentCommand{\vector}{m m}{\text{\lstinline{vec}}~{#1}~{#2}}
+\DeclareDocumentCommand{\vectorset}{m m m}{\text{\lstinline{vset}}~{#1}~{#2}~{#3}}
+\DeclareDocumentCommand{\vectorget}{m m}{\text{\lstinline{vget}}~{#1}~{#2}}
+\DeclareDocumentCommand{\tuple}{m}{(#1)}
+\DeclareDocumentCommand{\proj}{m m}{{#1}.(#2)}
+\DeclareDocumentCommand{\letin}{m m m}{\text{\lstinline{let}}~{#1} = {#2}~\text{\lstinline{in}}~{#3}}
+\DeclareDocumentCommand{\letrecin}{m m m}{\text{\lstinline{let rec}}~{#1} = {#2}~\textsf{in}~{#3}}
+%\DeclareDocumentCommand{\ifthenelse}{m m m}{\textsf{if}~{#1}~\textsf{then}~{#2}~\textsf{else}~{#3}}
+\DeclareDocumentCommand{\ifthenelse}{m m m}{\text{\lstinline{if}}~{#1}~\text{\lstinline{then}}~{#2}~\text{\lstinline{else}}~{#3}}
+\DeclareDocumentCommand{\loopit}{m m m m}{\text{\lstinline{for}}~{#1}~=~{#2}~\text{\lstinline{to}}~{#3}~\text{\lstinline{do}}~{#4}~\text{\lstinline{done}}}
+\DeclareDocumentCommand{\fun}{m m}{\text{\lstinline{fun}}~({#1}) -> {#2}}
+%\DeclareDocumentCommand{\fun}{m m}{\textsf{fun}~({#1}) -> {#2} = e}
+\DeclareDocumentCommand{\app}{m m}{{#1}~{#2}}
+\DeclareDocumentCommand{\binop}{m m}{#1~\odot~#2}
+\DeclareDocumentCommand{\datastruct}{m}{\text{\lstinline{type}}~{#1}~=~\evcolor{[}|~ C~\text{\lstinline{of}}~G \evcolor{]^{+}}}
+\DeclareDocumentCommand{\match}{m}{\text{\lstinline{match}}~{#1}~\text{\lstinline{with}}~\evcolor{[}|~C~x\ldots \text{\lstinline{->}}~e\evcolor{]^{+}}}
+
+\DeclareDocumentCommand{\ttuple}{m}{(#1)}
+\DeclareDocumentCommand{\tvec}{m}{\text{\lstinline{vec}}[{#1}]}
+\DeclareDocumentCommand{\tint}{}{\text{\lstinline{int}}}
+\DeclareDocumentCommand{\tbool}{}{\text{\lstinline{bool}}}
+\DeclareDocumentCommand{\tstring}{}{\text{\lstinline{string}}}
+\DeclareDocumentCommand{\tfloat}{}{\text{\lstinline{float}}}
+\DeclareDocumentCommand{\tunit}{}{\text{\lstinline{unit}}}
+\DeclareDocumentCommand{\tunk}{}{\text{\lstinline{?}}}
+\DeclareDocumentCommand{\tfun}{m m}{{#1} \to {#2}}
+\DeclareDocumentCommand{\tref}{m}{\text{\lstinline{ref}}[{#1}]}
+
+\DeclareDocumentCommand{\boxedtwo}{m m}{
+  {
+  \setlength{\fboxsep}{0pt}  % no padding between box border and contents
+  \fbox{%
+  \begin{tabular}{c|c}
+    #1 & #2
+  \end{tabular}%
+  }
+  }
+}
+\DeclareDocumentCommand{\boxedthree}{m m m}{
+  {
+  \setlength{\fboxsep}{0pt}  % no padding between box border and contents
+  \fbox{%
+  \begin{tabular}{c|c|c}
+    #1 & #2 & #3
+  \end{tabular}%
+  }
+  }
+}
+
+
+\newcommand{\true}{\mathtt{true}}
+
+% OCaml style for listings
+\lstdefinestyle{ocaml}{
+  language=[Objective]Caml,      % built-in OCaml lexer
+  basicstyle=\ttfamily\small,    % code font
+  numbers=left,                  % line numbers (optional)
+  numberstyle=\tiny,
+  stepnumber=1,
+  showstringspaces=false,
+  columns=fullflexible,
+  keepspaces=true,
+  frame=single,
+  framerule=0.3pt,
+  breaklines=true,
+  tabsize=2,
+  keywordstyle={\bfseries\color{blue!70!black}},
+  keywordstyle=[2]{\bfseries\color{teal!70!black}},
+  commentstyle=\itshape\color{green!50!black},
+  stringstyle=\color{purple!60!black},
+  % Nice unicode and math replacements (optional)
+  morekeywords={
+    int,bool,float,char,string,unit,ref,mutable,fun,let rec,match,with,if,then,else,type,module,struct,open,include, vec, type, match, with, vget, vset, box, unbox,boxed, bflt, iflt, ifloat, bfloat, imm, box
+  },
+  morekeywords=[2]{dom,cod,ascribe,self},
+  literate=
+    {λ}{{$\lambda$}}1
+    {->}{{$\to$}}2
+    {=>}{{$\Rightarrow$}}2
+    {>=}{{$\ge$}}2
+    {<=}{{$\le$}}2
+    {?}{{\bfseries\color{blue!70!black}?}}1
+    {<}{{$\langle$}}1
+    {>}{{$\rangle$}}1
+}
+\lstset{style=ocaml, mathescape=true}
+
+
+\newcommand{\simdfo}{\stackrel{c}{=}} 
+\newcommand{\csim}{\stackrel{c}{\sim}} % gradual
+
+\newcommand{\BF}{\mathsf{BF}}
+\newcommand{\FF}{\mathsf{FF}}
+\newcommand{\FB}{\mathsf{FB}}
+\newcommand{\BB}{\mathsf{BB}}
+
+\newcommand{\Btype}{\text{\lstinline{bflt}}}
+\newcommand{\Ftype}{\text{\lstinline{iflt}}}
+
+\newcommand{\oblset}[1]{\textsc{#1}}
+\newcommand{\GType}{\oblset{GType}}
+\newcommand{\Type}{\oblset{Type}}
+\newcommand{\Pow}{\ensuremath{\mathcal{P}}}
+\newcommand{\RType}{\oblset{RType}}
+\newcommand{\EType}{\oblset{EType}}
+
+\newcommand{\R}{R}
+\newcommand{\Rel}{\ensuremath{\mathcal{R}}}
+\newcommand{\iev}[1][\Rel]{\mathcal{I}_{#1}}
+
+\setlength{\parindent}{2em}
