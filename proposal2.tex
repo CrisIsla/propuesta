@@ -183,6 +183,8 @@ $$bool \sim \? \land \? \sim int$$
 Evidence is a runtime object that carries information about the type of some judgement.
 This construction has its own types $ETYPE$.
 
+\begin{comment}
+  
 To illustrate a more general case, lets introduce a gradual language where static types are natural numbers, and the only relation between them is the ``less than'' comparison ($\leq$).
 
 Imagine now that we have the following judgement:
@@ -291,6 +293,7 @@ The concretization of the evidences $\gamma_E$ is
 
 $$\langle [10, 10], [20, 20] \rangle |- 10 \tilde\leq 20$$
 
+\end{comment}
 
 When more complex types and relations are available (like subtyping, for example), evidence needs to be able to store the information about the types involved and the relations between them.
 
