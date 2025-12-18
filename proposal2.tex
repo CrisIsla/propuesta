@@ -34,10 +34,11 @@ The core difficulty lies in enforcing soundness without having considerable perf
 % If this checks are inefficient, the overhead of mixing types can result in performance degradation so severe that it renders the gradual language impractical for production use.
 % Consequently, the central research challenge in this field is the development of compilation techniques and runtime memory representations that minimize this interoperability overhead.
 
-To date, the Grift compiler \cite{grift} stands as the reference implementation for high-performance, close-to-the-metal gradual typing.
-Grift employs a coercion-based approach, where type consistency checks are reified as ``coercions'' (specialized data structures representing the path between source and target types).
+To date, there exist two main aproaches on how to implement gradual compilers.
+Coersion-based gradual typing uses coersions (specialized data structures representing the path between source and target types) to check type consistency.
+The Grift compiler \cite{grift} stands as the reference implementation of these approach.
 
-An alternative to this approach is Abstracting Gradual Typing (AGT) \cite{10.1145/2914770.2837670}.
+Evidence-based gradual typing is the alternative presented by Abstracting Gradual Typing (AGT) \cite{10.1145/2914770.2837670}.
 AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
 This model uses evidence; a runtime value that serves as justification for plausibility of a consistent typing judgment, to check for types.
 
@@ -46,7 +47,7 @@ The compiler has different semantic configurations that change the way the langu
 Preliminary evaluations indicate that GrEv is not only competitive with Grift but outperforms it in specific scenarios.
 Also, results show that GrEv is more stable across configurations on the static-to-dynamic spectrum.
 
-Despite its great results, there still is a lot of room for improvement, and the question about wether this results are because go the simplistic of the scenario or for other reasons arrises.
+Despite its great results, there still is a lot of room for improvement, and the question about whether this results are because go the simplistic of the scenario or for other reasons arrises.
 
 This thesis proposal aims to advance the state of the art of evidence-based gradual typing by exploring and implementing optimizations on memory representation of evidence on GrEv.
 
@@ -57,13 +58,13 @@ To understand the necessity of the proposed research, one must first analyze the
 \subsection{Grift: Coercions and Space Efficiency}
 
 Grift serves as the reference implementation for coercion-based gradual typing. 
-In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculus and this casts are then compiled into coercions.
-One of the main challenges in this systems is that casts can be accumulated.
+In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculus and this casts are then compiled into coercions, which in simple terms are a runtime representation of casts.
+One of the main challenges in this systems is that coersions can be accumulated.
 For example, consider a function that is passed from a typed module to an untyped module and back again multiple times.
-In a naive implementation, each boundary crossing adds a new wrapper to the function, wasting a lot of memory.
+In a naive implementation, each boundary crossing adds a new coersion to the function, wasting a lot of memory.
 Grift mitigates this problem via coercion composition.
 Whenever a new coercion is applied to an already coerted value, the runtime system attempts to compose the new coercion with the existing one.
-If the coercions are inverses (casting $\mathsf{int}$ to $\?$ and then back to $\mathsf{int}$, for example), they cancel each other out, and the wrapper is removed.
+If the coercions are inverses (casting $\mathsf{int}$ to $\?$ and then back to $\mathsf{int}$, for example), they cancel each other out, and the coersion is removed.
 If they are compatible, they are merged into a canonical form.
 This normalization process ensures that the space overhead of wrappers remains bounded.
 
