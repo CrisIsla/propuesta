@@ -19,10 +19,10 @@
 
 % background: existencia de grev, que quiero poder evaluar de mejor manera y optimizar
 
-In the world of software engineering we often find ourselves in the dilemma of choosing between two distinct tools: a flexible dynamic typed language, or a reliable statically typed one.
+In the world of software engineering we often find ourselves in the dilemma of choosing between two distinct tools: a flexible dynamically typed language, or a reliable statically typed one.
 On one side, dynamically typed languages like Python and JavaScript prioritize developer flexibility, rapid prototyping and expressiveness by deferring type checking to runtime.
 On the other side, statically typed languages like OCaml and Rust prioritize early error detection, correctness and performance through ahead-of-time type verification.
-Gradual typing has emerged as one of the main options to reconcile this opposing paradigms, allowing a single language to support both disciplines seamlessly by introduccing the unknown type (denoted by $\?$), a type that represents every type.
+Gradual typing has emerged as one of the main options to reconcile these opposing paradigms, allowing a single language to support both disciplines seamlessly by introducing the unknown type (denoted by $\?$), a type that represents every type.
 By enabling developers to control the precision of static type checking at a fine-grained level (down to individual function arguments or variable bindings) gradual typing promises to 
 deliver the best of both worlds, facilitating the evolution of scripts into robust applications without necessitating a complete rewrite in a different language.
 To illustrate how gradual typing works, let us gradualize the following fully static program:
@@ -41,7 +41,7 @@ let add1: ? -> int = fun x -> x + 1 in
   add1 true;
 \end{lstlisting}
 
-\noindent Now, this program should type check because the functions argument can be any type, but if no runtime checks are applied, this program would most probably end in segmentation fault.
+\noindent Now, this program should type check because the function's argument can be any type, but if no runtime checks are applied, this program would most probably end in segmentation fault.
 Gradual typing statically checks for type errors, and when types are not precise enough to ensure safety, runtime checks are inserted.
 
 Despite the elegant idea, the practical realization of gradual typing comes with significant engineering challenges.
@@ -52,9 +52,9 @@ The core difficulty lies in enforcing soundness without having considerable perf
 % If this checks are inefficient, the overhead of mixing types can result in performance degradation so severe that it renders the gradual language impractical for production use.
 % Consequently, the central research challenge in this field is the development of compilation techniques and runtime memory representations that minimize this interoperability overhead.
 
-To date, there exist two main aproaches on how to implement gradual compilers.
-Coersion-based gradual typing uses coersions (specialized data structures representing the path between source and target types) to check type consistency.
-The Grift compiler \cite{grift} stands as the reference implementation of these approach.
+To date, there exist two main approaches on how to implement gradual compilers.
+Coercion-based gradual typing uses coercions (specialized data structures representing the path between source and target types) to check type consistency.
+The Grift compiler \cite{grift} stands as the reference implementation of this approach.
 
 Evidence-based gradual typing is the alternative presented by Abstracting Gradual Typing (AGT) \cite{10.1145/2914770.2837670}.
 AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
@@ -65,7 +65,7 @@ The compiler has different semantic configurations that change the way the langu
 Preliminary evaluations indicate that GrEv is not only competitive with Grift but outperforms it in specific scenarios.
 Also, results show that GrEv is more stable across configurations on the static-to-dynamic spectrum.
 
-Despite its great results, there still is a lot of room for improvement, and the question about whether this results are because go the simplistic of the scenario or for other reasons arrises.
+Despite its great results, there still is a lot of room for improvement, and the question about whether these results are because of the simplistic nature of the scenario or for other reasons arises.
 
 This thesis proposal aims to advance the state of the art of evidence-based gradual typing by exploring and implementing optimizations on memory representation of evidence on GrEv.
 
@@ -76,13 +76,13 @@ To understand the necessity of the proposed research, one must first analyze the
 \subsection{Grift: Coercions and Space Efficiency}
 
 Grift serves as the reference implementation for coercion-based gradual typing. 
-In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculus and this casts are then compiled into coercions, which in simple terms are a runtime representation of casts.
-One of the main challenges in this systems is that coersions can be accumulated.
+In this model, the static semantics of the gradual language are elaborated into an intermediate cast calculus and these casts are then compiled into coercions, which in simple terms are a runtime representation of casts.
+One of the main challenges in these systems is that coercions can be accumulated.
 For example, consider a function that is passed from a typed module to an untyped module and back again multiple times.
-In a naive implementation, each boundary crossing adds a new coersion to the function, wasting a lot of memory.
+A straightforward implementation incurs a new coercion at every boundary crossing, resulting in inefficient memory utilization.
 Grift mitigates this problem via coercion composition.
-Whenever a new coercion is applied to an already coerted value, the runtime system attempts to compose the new coercion with the existing one.
-If the coercions are inverses (casting $\mathsf{int}$ to $\?$ and then back to $\mathsf{int}$, for example), they cancel each other out, and the coersion is removed.
+Whenever a new coercion is applied to an already coerced value, the runtime system attempts to normalize the composition.
+If the coercions are inverses (casting $\mathsf{int}$ to $\?$ and then back to $\mathsf{int}$, for example), they cancel each other out, and the coercion is removed.
 If they are compatible, they are merged into a canonical form.
 This normalization process ensures that the space overhead of wrappers remains bounded.
 
@@ -91,15 +91,15 @@ In a traditional ``guarded'' approach, a mutable reference is wrapped in a proxy
 This allows different parts of the program to have different, potentially incompatible views of the same heap cell.
 However, this requires every read and write operation to go through the proxy to get to the value.
 
-Grift's monotonic configuration (GriftMS) makes it so that every time a reference is casted to a more precise type, the original heap cell is updated to display this change.
+The monotonic configuration of Grift (GriftMS) makes the heap cell itself track the most precise type it has been cast to.
 If the cell contains a structure, it is recursively traversed to ensure all reachable values conform to the new type.
 
 \subsection{GrEv: Evidence-based Compilation}
 
-GrEv implements the GTLC+ language, which syntax is presented in Figure~\ref{fig:lang-syntax}.
+GrEv implements the GTLC+ language, whose syntax is presented in Figure~\ref{fig:lang-syntax}.
 This compiler represents a paradigm shift, implementing the runtime semantics of AGT directly.
 Instead of translating types into coercions, GrEv preserves the structure of gradual types at runtime in the form of evidence.
-To better understand what evidence is, we first need to introduce some concepts:
+To better understand what evidence is, we first need to introduce some concepts.
 
 \begin{figure}[t]
   \begin{displaymath}
@@ -130,8 +130,8 @@ To better understand what evidence is, we first need to introduce some concepts:
 
 \subsubsection{Concretization and Abstraction}
 
-The key idea in the AGT framework is to view gradual types as abtractions of sets of static types, formally defined by a Galois connection.
-This connections define two functions, the concretization function $\gamma$ and the abstraction function $\alpha$, both functioning as a conection between sets which, in this case, are GTYPE (the set of all gradual types), and $P(TYPE)$ (the set of all sets that can be created from static types).
+The key idea in the AGT framework is to view gradual types as abstractions of sets of static types, formally defined by a Galois connection.
+These connections define two functions, the concretization function $\gamma$ and the abstraction function $\alpha$, both functioning as a connection between sets which, in this case, are GTYPE (the set of all gradual types), and $P(TYPE)$ (the set of all sets that can be created from static types).
 
 The concretization function ($\gamma$) maps a gradual type to the set of static types it represents.
 For precise types (like int or bool), the mapping is singular:
@@ -144,7 +144,7 @@ $$\gamma(\?) = TYPE$$
 
 \noindent Structural types propagate this relation. A gradual function type $G_1 \rightarrow G_2$ concretizes to the set of all static function types $T_1 \rightarrow T_2$ where $T_1$ is in the concretization of $G_1$ and $T_2$ is in the concretization of $G_2$.
 
-With this definition we can think about \textbf{precision}.
+With this definition we can think about \textit{precision}.
 A gradual type $G_1$ is more precise than $G_2$ if the set of static types represented by $G_1$ (i.e. its concretization) is a subset of those represented by $G_2$.
 
 The abstraction function ($\alpha$) maps a set of static types to the more precise gradual type that represents the set.
@@ -158,19 +158,11 @@ $$\alpha(\{int \rightarrow bool, int \rightarrow string\}) = int \rightarrow \?$
 
 \subsubsection{Consistency}
 
-In a static system there could be different type relations, like equality, subtyping, containtment, etc.
-What AGT proposes is that, in order to get the statics semantics of a gradual system, this relations must be lifted into their gradual counterparts.
-
-In a general manner, the lifting of a relation $R$ is denoted by:
-
-$$\tilde{R}(G_1, G_2) = \exists T_1 \in \gamma(G_1), T_2 \in \gamma(G_2), R(T_1, T_2)$$
-
-\noindent which in simple words means that $\tilde{R}$ of two gradual types $G_1$ and $G_2$ holds if there exist two static types $T_1$ and $T_2$ in the sets each gradual type represents where $R(T_1, T_2)$ holds.
+In a static system there could be different type relations, like equality, subtyping, containment, etc.
+What AGT proposes is that, in order to get the static semantics of a gradual system, these relations must be lifted into their gradual counterparts.
 
 In the case of GrEv, the only relation defined is equality, and its gradual counterpart is called consistency (denoted by $\sim$).
-We say that two gradual types $G_1$ and $G_2$ are consistent if there exist a type $T$ that belong to the concretization of both $G_1$ and $G_2$ (or in other words, if there exist two static types in each concretization that fulfill the equality relation).
-
-$$G_1 \sim G_2 \Leftrightarrow \gamma (G_1) \cap \gamma (G_2) \ne \emptyset$$
+We say that two gradual types $G_1$ and $G_2$ are consistent if there exists a type $T$ that belongs to the concretization of both $G_1$ and $G_2$ (or in other words, if there exist two static types in each concretization that fulfill the equality relation).
 
 \noindent This explains why $int$ is consistent with $\?$ ($int$ is in the set of all types), but not consistent with $bool$.
 A very important detail is that, different from equality, \textbf{consistency is not transitive}.
@@ -178,7 +170,7 @@ If it were, we could have something like the following:
 
 $$int\sim \? \land \? \sim bool \Rightarrow int \sim bool$$
 
-\noindent which breaks the static rules.
+\noindent but $int ~ bool$ does not hold.
 
 \subsection{Evidence and Consistent Transitivity}
 \label{sec:evconsistent}
@@ -193,7 +185,7 @@ let f: ? -> int = fun x -> x + x in
 \end{lstlisting}
 
 \noindent In this example, the function $\mathsf{f}$ expects an $\mathsf{\?}$ and a value of type $bool$ is given.
-This program type checks because $bool \sim \?$, but in runtime, as the function tries to add the argument with itself, we have a chain:
+This program type checks because $bool \sim \?$, but at runtime, as the function tries to add the argument with itself, we have a chain:
 
 $$bool \sim \? \land \? \sim int$$
 
@@ -201,7 +193,6 @@ $$bool \sim \? \land \? \sim int$$
 
 Evidence is a runtime object that carries information about the type of some value. It evolves during runtime in order to give the current most precise information about it.
 In the example, statically we cannot know the exact type of the argument of the function, so we have to check during runtime if the judgement holds with the value given to it.
-In general terms, evidence has its own types $ETYPE$, but in GrEv's case, evidence types are the same as gradual types.
 
 \begin{comment}
   
@@ -321,7 +312,7 @@ In GrEv, every value is an \textit{evidence value}. This means that every value 
 Evidence starts from an initial state derived from the type given statically to the value associated to it, and evolves whenever more precise information about this type is available.
 When a judgement between two values is checked, their evidences are ``combined'' and, depending if the combination succeedes or not, the program continues or halts with a runtime error.
 
-In order to understand how evidence should work and evolve, we can list the operations needed and use them to briefly overview the runtime evolution of the example program of the previous section.
+In order to understand how evidence is introduced and evolves, we list the operations needed and use them to briefly overview the runtime evolution of the example program of the previous section.
 
 \begin{enumerate}
   \item \textbf{\textit{Elaboration:}} First, the initial evidence of each value in the program is calculated.
@@ -329,7 +320,7 @@ In order to understand how evidence should work and evolve, we can list the oper
   \item \textbf{\textit{Consistent Transitivity:}} Whenever a judgement between two values needs to be justified, their evidences are combined using \textit{consistency transitivity} (denoted by $\circ$).
     In order to justify a judgement, we justify that transitivity holds for an specific case of consistency (for example, between $int\sim \?$ and $\? \sim bool$).
     If the judgements holds, the resulting evidence is the result of this operation between the evidences. If the judgement is not justified, the program halts with a runtime error.
-  \item \textbf{\textit{Dom and Cod:}} For ``$\rightarrow$'' types, consistent transitivity must be checked between its arguments and the functions $dom$. If this judgement holds, then the resulting value should have evidence with the type of the functions $cod$.
+  \item \textbf{\textit{Inversion functions:}} For function types, consistent transitivity must be checked between its arguments and the function's domain. If this judgement holds, then the resulting value should have evidence with the type of the function's codomain.
 \end{enumerate}
 
 \noindent Using these operations, the example program should evolve like this:
@@ -361,12 +352,12 @@ If the program had the function applied to an $int$, then this last judgement wo
 \subsection{GrEv configurations}
 
 As mentioned before, values are evidence values.
-GrEv differentiate them by whether they are immediate or stored in the heap (boxed).
+GrEv differentiates them by whether they are immediate or stored in the heap (boxed).
 Immediate values (integers and booleans) are tagged, and because evidence is represented as gradual types, tags also function as evidence for this kind of values.
-Boxed values (as shown in Table~\ref{tab:values}) have an specific field in memory that saves its evidence alongside their respective information.
-For boxed values, evidence can be stored as a number or a pointer to a structure that contains a larger evidence.
+Boxed values (as shown in Table~\ref{tab:values}) have a specific field in memory that saves its evidence alongside their respective information.
+This evidence can be stored as a number or a pointer to a structure that contains a larger evidence.
 For example, the evidence of a function cannot be stored in a single cell, so its evidence is stored in a tree-like structure where the root node contains the types of the function, the arity and an array with the evidences of each argument and return type.
-Depending on the configuration (as shown in Table \ref{tab:values}), values will be stored adyacent to their evidence (monotonic configurations), or in a proxy that contains evidence and a pointer to the values (guarded configurations).
+Depending on the configuration (as shown in Table \ref{tab:values}), values will be stored next to their evidence (monotonic configurations), or in a proxy that contains evidence and a pointer to the values (guarded configurations).
 
 
 \begin{table}[t]
@@ -396,7 +387,7 @@ closure & \boxedthree{ev}{fun\_ptr}{vals...} & \boxedthree{ev}{fun\_ptr}{vals\_p
 \end{table}
 
 GrEv supports different semantic configurations that interacts with evidence in different ways.
-To ilustrate the semantic each of the configurations supports, let's analyse the program in Figure~\ref{fig:mono-vs-guarded} that uses references (closures and tuples follow the same logic):
+To illustrate the semantic each of the configurations supports, let's analyse the program in Figure~\ref{fig:mono-vs-guarded} that uses references (closures and tuples follow the same logic).
 
 \subsubsection{Guarded configurations: GrEv/G}
 
@@ -447,17 +438,19 @@ As these types become more complex, their tree-like representation becomes deepe
 \begin{enumerate}
   \item \textbf{\textit{Memory allocation:}} Memory allocation is a slow operation.
     In order to store the evidence of a complex structural type, many memory allocations must be made (one for each node in the tree).
-  \item \textbf{\textit{Consistent transitivity:}} Whenever a check between two large structural types is made, consistency between their tree-like structures must be computed.
-    In particular, to check consistency between two ``$\rightarrow$'' types $G_1$ and $G_2$, $dom(G_1) ~ dom(G_2)$ and $cod(G_1) ~ cod(G_2)$ must be checked recursively.
+  \item \textbf{\textit{Consistent transitivity:}} Whenever a check between two structural types is made, consistency between their tree-like structures must be computed.
+    This becomes increasingly expensive as the size of the structures increase.
 \end{enumerate}
 
 \section{Proposed solutions}
 
-The proposed solutions aim to optimize GrEv's evidence memory representation in order to explore the impact the presented problems have over the compilers performance, and to improve it in this specific cases.
+The proposed solutions aim to optimize GrEv's evidence memory representation to improve the compiler's performance in these specific cases.
 In order to accomplish this, new memory representations for evidence must be implemented and tested.
-As an initial research, the following optimization have been considered:
+As an initial research, the following optimizations have been considered:
 
 \begin{itemize}
+  \item \textbf{\textit{Memoization:}} Memoization is an optimization that consists of caching the result of expensive function calls and returning the cached result whenever the same call is made in the future.
+    This optimization could help when evaluating consistent transitivity between large structural types.
   \item \textbf{\textit{Hash consing:}} Hash consing is an optimization that aims to improve the memory allocation problem.
     In simple terms, it consists of hashing structural types for better memory management and equality (or in this case consistency) checking.
     Every time a structural type is needed, a hash of its contents is calculated.
@@ -465,46 +458,40 @@ As an initial research, the following optimization have been considered:
     If it exists, then there is no need to allocate more memory, and the pointer to the type is shared.
     This makes it so that the comparison between two types is the same as the comparison of its pointers.
 
-    \noindent Grift implements this optimization for structural types on its Monotonic mode (Grift\/MS).
+    \noindent Grift implements this optimization for structural types on its Monotonic mode (Grift\/MS) \cite{almahallawi:phd}.
 
-  \item \textbf{\textit{Consice Binary Object Representation and Compact Data Structures:}} The problem with hash consing is that it does not provide an intuitive way of calculating two of the main operations needed for structural types: $dom$ and $cod$.
+  \item \textbf{\textit{Different memory representations for boxed values:}} The problem with hash consing is that it does not provide an intuitive way of calculating inversion operations needed for structural types.
     Other memory representations may not be as space-efficient as hash-consing, but can provide a middle term between space and time efficiency.
-    Consice Binary Object Representation (CBOR) and Compact Data Structures \cite{Navarro_2016} are good candidates.
-    Creating a new memory representation based on these candidates may offer more flexibility over hash consing at the expenses of using more memory.
-    Either way, more reaserch on these memory representations is needed in order to fully see its potentials and weaknesess.
+    Concise Binary Object Representation (CBOR) and Compact Data Structures \cite{Navarro_2016} are good candidates, though recent experiments carried out by Jose Luis Romero in his MSc thesis show that some tuning might be necessary to make them effective in this setting.
+    Creating a new memory representation based on these candidates may offer more flexibility over hash consing at the expense of using more memory.
+    Either way, more research on these memory representations is needed in order to fully see its potentials and weaknesses.
 \end{itemize}
 
-\section{Research questions}
+\section{Research question}
 
-The research questions regarding this thesis are the following:
-
+This thesis will address the following research question:
 \begin{itemize}
-  \item Do the proposed optimization on evidence memory representation help to reduce the overhead of the current implementation of GrEv?
-  \item How much does the current implementation of evidence in GrEv's differents gradual configurations affect on its overhead over different baselines, like StaticGrEv, StaticGrift and Racket?
-  \item How much can an optimization on GrEv's Evidence memory representation improve its performance?
+  \item To what extent can optimized memory representations for evidence, specifically through optimizations like memoization and hash consing, and different data structures that suit better on evidence specific needs, improve the performance of GrEv?
 \end{itemize}
+% The research questions regarding this thesis are the following:
+%
+% \begin{itemize}
+%   \item Do the proposed optimizations on evidence memory representation help to reduce the overhead of the current implementation of GrEv?
+%   \item How much does the current implementation of evidence in GrEv's differents gradual configurations affect on its overhead over different baselines, like StaticGrEv, StaticGrift and Racket?
+%   \item How much can an optimization on GrEv's Evidence memory representation improve its performance?
+% \end{itemize}
 
 \section{Hypothesis}
 
-The current implementation of GrEv's evidence affects significantly on its overhead, and its possible to reduce it by using a more clever implementation that is optimized for the operations needed. 
+The current implementation of GrEv's evidence significantly affects on its performance, and it is possible to improve it by using an implementation that is optimized for the operations needed. 
 
 \section{Main Objective}
 
-The main objective of this proposal is to optimize GrEv's evidence current memory representation using a more suitable data structure, that is more efficient, space and timewise, on evidence specific operations: $cod$, $dom$, \textit{elaboration} and \textit{consistent transitivity}.
-
-\section{Specific Goals}
-
-The specific goals of this research proposal are the following:
-
-\begin{itemize}
-  \item Find data structures that better suit the needs of GrEv's evidence.
-  \item Implement a standarized benchmark suite (like GTP) to get better insight on GrEv's current state and the different evidence representations performances.
-  \item Measure different implementations to get better insight on what operations have more overhead in specific cases.
-\end{itemize}
+The main objective of this proposal is to optimize GrEv's evidence current memory representation using a data structure that suits better on evidence specific operations.
 
 \section{Methodology}
 
-To acomplish such goals, the following steps will be followed:
+To accomplish such goals, the following steps will be followed:
 
 \subsection{Initial Exploration}
 
@@ -515,16 +502,18 @@ To acomplish such goals, the following steps will be followed:
 \subsection{GrEv's Modularization and Expansion}
 
 \begin{itemize}
-  \item \textbf{Benchmark Analisis.} The GTP benchmarks suite \cite{GTP} consists on 21 benchmarks, each containing and measuring different characteristics of the language, some of which are not currently implemented currently on GrEv. There will be a selection of the most important benchmarks from this suite for the current version of GrEv, and also an analisis of which features will be implemented depending on the relevance of the benchmarks that GrEv currently could not support.
-  \item \textbf{Language Modularization.} The current state of GrEv's code does not support modular Evidence memory representations. There will be an analisis on what the best way to modularize GrEv's evidence implementations, so that it's easier to add and change between different versions.
-  \item \textbf{Language Extension.} Depeding on the selected benchmarks, the necessary features will be implemented on GrEv.
+  \item \textbf{Benchmark Analysis.} The GTP benchmarks suite \cite{GTP} consists of 21 benchmarks, each containing and measuring different characteristics of the language, some of which are not currently implemented on GrEv.
+    There will be a selection of the most important benchmarks from this suite for the current version of GrEv, and also an analysis of which features will be implemented depending on the relevance of the benchmarks that GrEv currently can not support.
+  \item \textbf{Language Modularization.} The current state of GrEv's code can be improved to better support modular evidence memory representations.
+    There will be an analysis on what the best way to modularize GrEv's evidence implementations, so that it's easier to add and change between different versions.
+  \item \textbf{Language Extension.} Depending on the selected benchmarks, the necessary features will be implemented on GrEv.
   \item \textbf{Benchmark Porting.} There will be a manual port of the selected benchmarks from Racket (GTP's source language) to GTLC+.
 \end{itemize}
 
 \subsection{Experimental Evaluation}
 
 \begin{itemize}
-  \item \textbf{Optimization Evaluations.} After implementing each optimization, there will be experimental evaluation to check how this affect on GrEv's performance. The optimized versions will be compared between themselves, with Grift (the state-of-the-art gradual typing compiler) and GrEv's different configurations, depending on the context. This comparisons will consider time and space performances.
+  \item \textbf{Optimization Evaluations.} After implementing each optimization, there will be experimental evaluation to check how this affects GrEv's performance. The optimized versions will be compared between themselves, with Grift (the state-of-the-art gradual typing compiler) and GrEv's different configurations, depending on the context. These comparisons will consider time and space performances.
 \end{itemize}
 
 \section{Contributions}
@@ -533,7 +522,7 @@ This thesis aims to advance the state of the art in high-performance gradual typ
 
 \begin{enumerate}
   \item \textbf{Design of optimized evidence representations:} The optimizations on GrEv's evidence memory representation will help on measuring the impact it has over the performance of the compiler, and more specifically, which parts act as a bottleneck.
-  \item \textbf{Performance evaluation via GTP:} The standarization of GrEv's benchmarks suite will give better insight on the performance of the compiler on its current state, and also on any changes, extensions or experiments made in the future.
+  \item \textbf{Performance evaluation via GTP:} The standardization of GrEv's benchmarks suite will give better insight on the performance of the compiler on its current state, and also on any changes, extensions or experiments made in the future.
 \end{enumerate}
 
 
