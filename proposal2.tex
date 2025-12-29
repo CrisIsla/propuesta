@@ -14,6 +14,7 @@
 
 \title{Optimizing evidence memory representation on GrEv; an evidence based gradual typing compiler.}
 \begin{document}
+\maketitle
 
 \section{Introduction}
 
@@ -59,6 +60,9 @@ The Grift compiler \cite{grift} stands as the reference implementation of this a
 Evidence-based gradual typing is the alternative presented by Abstracting Gradual Typing (AGT) \cite{10.1145/2914770.2837670}.
 AGT re-imagines gradual typing not as a translation to a cast calculus, but through the lens of Abstract Interpretation.
 This model uses evidence; a runtime value that serves as justification for plausibility of a consistent typing judgment, to check for types.
+Following the previous example, to check if the argument given to the function call is correct, its evidence would be compared using an specific operation with the evidence of the function in order to see if it can be applied.
+If this operation succedes, then each evidence (the argument and the funcion one) would be updated to a more precise version.
+Being more specific, the function's evidence would be updated so that it tell us that a boolean (the type of the argument) is accepted by the function.
 
 The GrEv compiler \cite{grev} represents the first attempt to build a high-performance compiler based on evidence.
 The compiler has different semantic configurations that change the way the language interacts with evidence.
@@ -355,8 +359,10 @@ As mentioned before, values are evidence values.
 GrEv differentiates them by whether they are immediate or stored in the heap (boxed).
 Immediate values (integers and booleans) are tagged, and because evidence is represented as gradual types, tags also function as evidence for this kind of values.
 Boxed values (as shown in Table~\ref{tab:values}) have a specific field in memory that saves its evidence alongside their respective information.
-This evidence can be stored as a number or a pointer to a structure that contains a larger evidence.
-For example, the evidence of a function cannot be stored in a single cell, so its evidence is stored in a tree-like structure where the root node contains the types of the function, the arity and an array with the evidences of each argument and return type.
+This evidence is stored as an structure that contains an id (there is one for every type in the language) and some other information regarding the type asociated.
+For example, the evidence of a function is stored in a structure that contains its id, the arity of the function, and an array with the evidences of each argument and return type.
+When the evidence is updated into a more precise type, this can result in a tree-like structure, for example, when the new type is another arrow type.
+
 Depending on the configuration (as shown in Table \ref{tab:values}), values will be stored next to their evidence (monotonic configurations), or in a proxy that contains evidence and a pointer to the values (guarded configurations).
 
 
